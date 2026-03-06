@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import API from "../api";
 import {
   Crown,
   Flame,
@@ -28,12 +28,7 @@ const LoyaltyPage = () => {
 
   const fetchUserData = async () => {
     try {
-      const { data } = await axios.get(
-        "http://localhost:5000/api/users/profile",
-        {
-          withCredentials: true,
-        },
-      );
+      const { data } = await API.get("/api/users/profile");
 
       setPoints(data.loyaltyPoints || 0);
       setIsPlus(data.isPlusMember || false);
@@ -59,11 +54,7 @@ const LoyaltyPage = () => {
   const handleActivatePlus = async () => {
     try {
       setProcessing(true);
-      await axios.post(
-        "http://localhost:5000/api/users/activate-plus",
-        {},
-        config,
-      );
+      await API.post("/api/users/activate-plus");
       fetchUserData();
     } catch (err) {
       console.error(err);

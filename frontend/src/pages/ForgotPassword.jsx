@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import API from "../api";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Mail,
@@ -11,11 +11,6 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-
-const api = axios.create({
-  baseURL: "http://localhost:5000",
-  withCredentials: true, 
-});
 
 const ForgotPassword = () => {
   const [step, setStep] = useState(1);
@@ -58,7 +53,7 @@ const ForgotPassword = () => {
     setError("");
     setLoading(true);
     try {
-      await api.post("/api/users/send-otp", { email });
+      await API.post("/api/users/send-otp", { email });
       setStep(2);
     } catch (err) {
       setError(
@@ -80,7 +75,7 @@ const ForgotPassword = () => {
     }
     setLoading(true);
     try {
-      await api.post("/api/users/reset-password", { email, otp, newPassword });
+      await API.post("/api/users/reset-password", { email, otp, newPassword });
       navigate("/login");
     } catch (err) {
       setError(err.response?.data?.message || "Reset failed. Check your OTP.");
@@ -233,7 +228,6 @@ const ForgotPassword = () => {
                     {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                   </button>
                 </div>
-
 
                 {newPassword && (
                   <div className="space-y-1.5">

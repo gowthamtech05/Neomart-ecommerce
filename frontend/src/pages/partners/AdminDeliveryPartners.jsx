@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import API from "../api/api";
 import {
   Bike,
   CheckCircle,
@@ -37,10 +37,7 @@ export default function AdminDeliveryPartners() {
     if (!silent) setLoading(true);
     else setPolling(true);
     try {
-      const { data } = await axios.get(
-        "http://localhost:5000/api/delivery-partners/admin/all",
-        { withCredentials: true }, // ✅ cookie
-      );
+      const { data } = await API.get("/delivery-partners/admin/all");
       setPartners(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
@@ -59,11 +56,9 @@ export default function AdminDeliveryPartners() {
       replyTexts[id]?.trim() || "Welcome to the NeoMart delivery team!";
     setActing((p) => ({ ...p, [id]: "accepting" }));
     try {
-      const { data } = await axios.put(
-        `http://localhost:5000/api/delivery-partners/admin/${id}/accept`,
-        { adminReply: reply },
-        { withCredentials: true }, // ✅ cookie
-      );
+      const { data } = await API.put(`/delivery-partners/admin/${id}/accept`, {
+        adminReply: reply,
+      });
       setPartners((prev) => prev.map((p) => (p._id === id ? data : p)));
     } catch {
       alert("Failed to accept");
@@ -80,11 +75,9 @@ export default function AdminDeliveryPartners() {
     }
     setActing((p) => ({ ...p, [id]: "declining" }));
     try {
-      const { data } = await axios.put(
-        `http://localhost:5000/api/delivery-partners/admin/${id}/decline`,
-        { adminReply: reply },
-        { withCredentials: true }, // ✅ cookie
-      );
+      const { data } = await API.put(`/delivery-partners/admin/${id}/decline`, {
+        adminReply: reply,
+      });
       setPartners((prev) => prev.map((p) => (p._id === id ? data : p)));
     } catch {
       alert("Failed to decline");

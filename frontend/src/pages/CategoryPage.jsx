@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
+import API from "../api";
 
 const CategoryPage = () => {
   const { categoryName } = useParams();
@@ -13,10 +14,7 @@ const CategoryPage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/products`, {
-          credentials: "include",
-        });
-        const data = await res.json();
+        const { data } = await API.get("/api/products");
 
         if (Array.isArray(data)) {
           const categoryFiltered = data.filter(

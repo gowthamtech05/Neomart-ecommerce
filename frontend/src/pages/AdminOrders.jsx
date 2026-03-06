@@ -4,7 +4,7 @@ import React, {
   useLayoutEffect,
   useCallback,
 } from "react";
-import axios from "axios";
+import API from "../api";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Bike,
@@ -85,10 +85,10 @@ function AssignModal({
           : "";
         const url =
           lat && lng
-            ? `http://localhost:5000/api/delivery-partners/admin/active?lat=${lat}&lng=${lng}${pincodeParam}${districtParam}`
-            : `http://localhost:5000/api/delivery-partners/admin/active?${pincodeParam.slice(1)}${districtParam}`;
+            ? `/api/delivery-partners/admin/active?lat=${lat}&lng=${lng}${pincodeParam}${districtParam}`
+            : `/api/delivery-partners/admin/active?${pincodeParam.slice(1)}${districtParam}`;
 
-        const { data } = await axios.get(url, { withCredentials: true });
+        const { data } = await API.get(url);
         setPartners(Array.isArray(data) ? data : []);
       } catch {
         setGeocoding(false);
@@ -103,11 +103,10 @@ function AssignModal({
     if (!chosen) return;
     setAssigning(true);
     try {
-      await axios.put(
-        "http://localhost:5000/api/delivery-partners/admin/orders/assign",
-        { partnerId: chosen, orderIds: selectedOrders },
-        { withCredentials: true },
-      );
+      await API.put("/api/delivery-partners/admin/orders/assign", {
+        partnerId: chosen,
+        orderIds: selectedOrders,
+      });
       onAssigned();
     } catch (err) {
       alert(err.response?.data?.message || "Assignment failed");
@@ -293,10 +292,8 @@ function UnassignModal({ order, onClose, onDone }) {
   const handleUnassign = async () => {
     setLoading(true);
     try {
-      await axios.put(
-        `http://localhost:5000/api/delivery-partners/admin/orders/${order._id}/unassign`,
-        {},
-        { withCredentials: true },
+      await API.put(
+        `/api/delivery-partners/admin/orders/${order._id}/unassign`,
       );
       onDone();
     } catch (err) {
@@ -375,12 +372,7 @@ function AdminOrders() {
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(
-        "http://localhost:5000/api/orders/admin",
-        {
-          withCredentials: true,
-        },
-      );
+      const { data } = await API.get("/api/orders/admin");
       setOrders(data.orders ? data.orders : data);
     } catch {
       console.error("Error fetching orders");
@@ -412,11 +404,7 @@ function AdminOrders() {
   const deliverHandler = async (id) => {
     if (!window.confirm("Mark this order as delivered?")) return;
     try {
-      await axios.put(
-        `http://localhost:5000/api/orders/${id}/deliver`,
-        {},
-        { withCredentials: true },
-      );
+      await API.put(`/api/orders/${id}/deliver`);
       fetchOrders();
     } catch {
       alert("Delivery update failed");
@@ -426,11 +414,7 @@ function AdminOrders() {
   const refundHandler = async (id) => {
     if (!window.confirm("Confirm refund has been processed?")) return;
     try {
-      await axios.put(
-        `http://localhost:5000/api/orders/${id}/refund`,
-        {},
-        { withCredentials: true },
-      );
+      await API.put(`/api/orders/${id}/refund`);
       alert("Order marked as Refunded 💰");
       fetchOrders();
     } catch {
@@ -446,9 +430,7 @@ function AdminOrders() {
     )
       return;
     try {
-      await axios.delete("http://localhost:5000/api/orders/reset", {
-        withCredentials: true,
-      });
+      await API.delete("/api/orders/reset");
       setOrders([]);
       alert("Dashboard Reset 🧨");
     } catch (err) {

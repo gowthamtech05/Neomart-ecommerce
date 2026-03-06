@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import axios from "axios";
+import API from "../api";
 import {
   ChevronLeft,
   Package,
@@ -112,12 +112,7 @@ const OrderDetails = () => {
   const fetchOrder = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/orders/${id}`,
-        {
-          withCredentials: true,
-        },
-      );
+      const { data } = await API.get(`/api/orders/${id}`);
       setOrder(data);
     } catch (err) {
       setError(
@@ -136,20 +131,22 @@ const OrderDetails = () => {
 
   const downloadInvoice = async () => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/orders/${order._id}/invoice`,
-        {
-          credentials: "include",
-        },
-      );
-      const blob = await response.blob();
+      const response = await API.get(`/api/orders/${order._id}/invoice`, {
+        responseType: "blob",
+      });
+
+      const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
+
       const a = document.createElement("a");
       a.href = url;
       a.download = `invoice_${order._id}.pdf`;
+
       document.body.appendChild(a);
       a.click();
       a.remove();
+
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       alert("Failed to download invoice");
     }

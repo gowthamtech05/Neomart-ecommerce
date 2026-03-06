@@ -2,9 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
-import axios from "axios";
-
-const API = import.meta.env.VITE_API_URL;
+import API from "../api";
 
 const CACHE_KEY = "neomart_home";
 const CACHE_TTL = 5 * 60 * 1000;
@@ -79,15 +77,13 @@ const Home = ({ search = "" }) => {
 
     try {
       const [prodRes, adsRes, offRes] = await Promise.all([
-        fetch(`${API}/api/products`, { credentials: "include" }),
-        fetch(`${API}/api/ads`),
-        fetch(`${API}/api/offers`),
+        API.get("/api/products"),
+        API.get("/api/ads"),
+        API.get("/api/offers"),
       ]);
-      const [products, ads, offers] = await Promise.all([
-        prodRes.json(),
-        adsRes.json(),
-        offRes.json(),
-      ]);
+      const products = prodRes.data;
+      const ads = adsRes.data;
+      const offers = offRes.data;
       writeCache({ products, ads, offers });
       setProducts(products);
       setAds(ads);
@@ -112,18 +108,11 @@ const Home = ({ search = "" }) => {
 
   const handleRemoveFromHome = async (id) => {
     if (!window.confirm("Remove this product from homepage?")) return;
+
     try {
-      const res = await fetch(`${API}/api/products/${id}/pin`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) {
-        alert("Failed to remove product");
-        return;
-      }
+      await API.put(`/api/products/${id}/pin`, {});
       bustCache();
+
       setProducts((prev) =>
         prev.map((p) => (p._id === id ? { ...p, isPinned: false } : p)),
       );
@@ -134,12 +123,13 @@ const Home = ({ search = "" }) => {
 
   const handleAddAd = async (file) => {
     if (!file) return;
+
     const formData = new FormData();
     formData.append("image", file);
+
     try {
-      await axios.post(`${API}/api/ads`, formData, {
-        withCredentials: true,
-      });
+      await API.post("/api/ads", formData);
+
       bustCache();
       fetchData(true);
     } catch (err) {
@@ -150,9 +140,7 @@ const Home = ({ search = "" }) => {
   const handleDeleteAd = async (id) => {
     if (!window.confirm("Delete this ad?")) return;
     try {
-      await axios.delete(`${API}/api/ads/${id}`, {
-        withCredentials: true,
-      });
+      await API.delete(`/api/ads/${id}`);
       bustCache();
       fetchData(true);
     } catch (err) {
@@ -162,12 +150,7 @@ const Home = ({ search = "" }) => {
 
   const updateOfferLink = async (id, newLink) => {
     try {
-      await fetch(`${API}/api/offers/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ link: newLink }),
-      });
+      await API.put(`/api/offers/${id}`, { link: newLink });
       bustCache();
       fetchData(true);
     } catch (err) {
@@ -179,11 +162,7 @@ const Home = ({ search = "" }) => {
     const fd = new FormData();
     fd.append("image", file);
     try {
-      await fetch(`${API}/api/offers/${id}`, {
-        method: "PUT",
-        credentials: "include",
-        body: fd,
-      });
+      await API.put(`/api/offers/${id}`, fd);
       bustCache();
       fetchData(true);
     } catch (err) {
@@ -193,10 +172,7 @@ const Home = ({ search = "" }) => {
 
   const deleteOffer = async (id) => {
     if (!window.confirm("Delete this offer?")) return;
-    await fetch(`${API}/api/offers/${id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
+    await API.delete(`/api/offers/${id}`);
     bustCache();
     setOffers(offers.filter((o) => o._id !== id));
   };
@@ -304,11 +280,7 @@ const Home = ({ search = "" }) => {
                   if (!file) return;
                   const fd = new FormData();
                   fd.append("image", file);
-                  await fetch(`${API}/api/offers`, {
-                    method: "POST",
-                    credentials: "include",
-                    body: fd,
-                  });
+                  await API.post("/api/offers", fd);
                   bustCache();
                   fetchData(true);
                 }}

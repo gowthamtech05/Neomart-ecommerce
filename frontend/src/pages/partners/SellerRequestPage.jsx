@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import API from "../api";
 import {
   Store,
   ImagePlus,
@@ -60,10 +60,7 @@ export default function SellerRequestPage() {
 
   const fetchRequest = async () => {
     try {
-      const { data } = await axios.get(
-        "http://localhost:5000/api/seller-requests/mine",
-        { withCredentials: true }, // ✅ cookie
-      );
+      const { data } = await API.get("/api/seller-requests/mine");
       setRequest(data);
     } catch (err) {
       if (err.response?.status === 401) setIsLoggedIn(false);
@@ -77,7 +74,6 @@ export default function SellerRequestPage() {
     fetchRequest();
   }, []);
 
-  // Poll for new chat messages every 8s when accepted
   useEffect(() => {
     const canChat =
       request?.status === "accepted" || request?.status === "chatting";
@@ -112,14 +108,9 @@ export default function SellerRequestPage() {
       const fd = new FormData();
       fd.append("message", message.trim());
       files.forEach((f) => fd.append("images", f));
-      const { data } = await axios.post(
-        "http://localhost:5000/api/seller-requests",
-        fd,
-        {
-          withCredentials: true, // ✅ cookie
-          headers: { "Content-Type": "multipart/form-data" },
-        },
-      );
+      const { data } = await API.post("/api/seller-requests", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       setRequest(data);
       setMessage("");
       setFiles([]);
@@ -136,10 +127,9 @@ export default function SellerRequestPage() {
     if (!chatMsg.trim()) return;
     setSendingChat(true);
     try {
-      const { data } = await axios.post(
-        `http://localhost:5000/api/seller-requests/${request._id}/chat`,
+      const { data } = await API.post(
+        `/api/seller-requests/${request._id}/chat`,
         { message: chatMsg.trim(), sender: "user" },
-        { withCredentials: true }, // ✅ cookie
       );
       setRequest(data);
       setChatMsg("");

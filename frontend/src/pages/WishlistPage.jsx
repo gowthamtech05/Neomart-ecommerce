@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import { Heart, ChevronLeft, Frown, ShoppingCart } from "lucide-react";
+import API from "../api/api";
+import { Heart, ChevronLeft, Frown } from "lucide-react";
 import { useWishlist } from "../context/WishlistContext";
 import { useCart } from "../context/CartContext";
 import { calculateDiscountedPrice } from "../utils/offerUtils";
 import specialOfferBadge from "../assets/Offer badge.png";
-
-const API = import.meta.env.VITE_API_URL;
 
 const WishlistProductCard = ({
   product,
@@ -18,7 +16,6 @@ const WishlistProductCard = ({
   const { addToCart } = useCart();
   const { isWishlisted } = useWishlist();
   const liked = isWishlisted(product._id);
-
   const userInfo = JSON.parse(localStorage.getItem("userInfo") || "null");
   const loyaltyPoints = Number(userInfo?.loyaltyPoints || 0);
   const isNewUser = !!(userInfo && userInfo.firstOrderCompleted === false);
@@ -174,16 +171,10 @@ const WishlistPage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const userInfo = JSON.parse(localStorage.getItem("userInfo") || "null");
-  const config = {
-    headers: { Authorization: `Bearer ${userInfo?.token}` },
-    withCredentials: true,
-  };
-
   useEffect(() => {
     const fetchWishlist = async () => {
       try {
-        const { data } = await axios.get(`${API}/api/wishlist`, config);
+        const { data } = await API.get("/api/wishlist");
         setProducts(data);
       } catch (err) {
         console.error(err);

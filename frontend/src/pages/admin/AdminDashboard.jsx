@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import axios from "axios";
+import API from "../api/api";
 import { jsPDF } from "jspdf";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -19,12 +19,7 @@ const AdminDashboard = () => {
   const fetchDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get(
-        "http://localhost:5000/api/orders/admin/dashboard",
-        {
-          withCredentials: true, 
-        },
-      );
+      const res = await API.get("/api/orders/admin/dashboard");
 
       console.log("FRONTEND RECEIVED DATA:", res.data);
 
@@ -114,13 +109,13 @@ const AdminDashboard = () => {
 
       // Label text
       doc.setFontSize(9);
-      doc.setTextColor("#64748B"); 
+      doc.setTextColor("#64748B");
       doc.setFont("helvetica", "bold");
       doc.text(stat.label.toUpperCase(), xPos + 15, currentY + 22);
 
       // Value text
       doc.setFontSize(16);
-      doc.setTextColor("#1E293B"); 
+      doc.setTextColor("#1E293B");
       doc.text(`${stat.value}`, xPos + 15, currentY + 48);
     });
 
@@ -200,18 +195,7 @@ const AdminDashboard = () => {
   const handleResetMonthly = async () => {
     if (!window.confirm("Reset all monthly stats?")) return;
     try {
-      const userInfo = JSON.parse(localStorage.getItem("userInfo"));
-      const config = {
-        headers: { Authorization: `Bearer ${userInfo?.token}` },
-      };
-
-      await axios.put(
-        "http://localhost:5000/api/orders/reset-monthly-data",
-        {},
-        {
-          withCredentials: true,
-        },
-      );
+      await API.put("/api/orders/reset-monthly-data");
 
       alert("Monthly stats reset successfully ✅");
       fetchDashboard();

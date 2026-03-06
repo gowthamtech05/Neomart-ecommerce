@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import API from "../api";
 
 function Login({ setIsLoggedIn, setIsAdmin }) {
   const [email, setEmail] = useState("");
@@ -11,28 +12,19 @@ function Login({ setIsLoggedIn, setIsAdmin }) {
     e.preventDefault();
     setError("");
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/users/login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ email, password }),
-        },
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.message || "Login failed");
-        return;
-      }
+      const res = await API.post("/api/users/login", { email, password });
+
+      const data = res.data;
+
       localStorage.setItem("userInfo", JSON.stringify(data));
       localStorage.setItem("isAdmin", data.isAdmin);
 
       setIsLoggedIn(true);
       setIsAdmin(data.isAdmin === true);
+
       navigate("/");
-    } catch {
-      setError("Server error. Please try again.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Login failed");
     }
   };
 

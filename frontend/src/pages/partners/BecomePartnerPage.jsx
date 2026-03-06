@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import API from "../api";
 import {
   Bike,
   ImagePlus,
@@ -112,12 +112,7 @@ export default function BecomePartnerPage() {
 
   const fetchProfile = async () => {
     try {
-      const { data } = await axios.get(
-        "http://localhost:5000/api/delivery-partners/mine",
-        {
-          withCredentials: true,
-        },
-      );
+      const { data } = await API.get("/delivery-partners/mine");
       setProfile(data);
     } catch {
       setProfile(null);
@@ -126,12 +121,7 @@ export default function BecomePartnerPage() {
 
   const fetchOrders = async () => {
     try {
-      const { data } = await axios.get(
-        "http://localhost:5000/api/delivery-partners/my-orders",
-        {
-          withCredentials: true,
-        },
-      );
+      const { data } = await API.get("/delivery-partners/my-orders");
       setOrders(Array.isArray(data) ? data : []);
     } catch {
       setOrders([]);
@@ -176,14 +166,9 @@ export default function BecomePartnerPage() {
       fd.append("area", area.trim());
       fd.append("district", district.trim());
       files.forEach((f) => fd.append("images", f));
-      const { data } = await axios.post(
-        "http://localhost:5000/api/delivery-partners",
-        fd,
-        {
-          withCredentials: true,
-          headers: { "Content-Type": "multipart/form-data" },
-        },
-      );
+      const { data } = await API.post("/delivery-partners", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       setProfile(data);
       setMessage("");
       setPhone("");
@@ -208,10 +193,9 @@ export default function BecomePartnerPage() {
   const handleGenerateOtp = async (orderId) => {
     setOtp(orderId, { loading: true });
     try {
-      const { data } = await axios.post(
-        `http://localhost:5000/api/delivery-partners/orders/${orderId}/generate-otp`,
+      const { data } = await API.post(
+        `/delivery-partners/orders/${orderId}/generate-otp`,
         {},
-        { withCredentials: true },
       );
       setOtp(orderId, {
         generatedOtp: data.otp,
@@ -230,11 +214,9 @@ export default function BecomePartnerPage() {
     if (!s.inputOtp?.trim()) return;
     setOtp(orderId, { loading: true });
     try {
-      await axios.post(
-        `http://localhost:5000/api/delivery-partners/orders/${orderId}/verify-otp`,
-        { otp: s.inputOtp.trim() },
-        { withCredentials: true },
-      );
+      await API.post(`/delivery-partners/orders/${orderId}/verify-otp`, {
+        otp: s.inputOtp.trim(),
+      });
       setOtpState((p) => {
         const n = { ...p };
         delete n[orderId];

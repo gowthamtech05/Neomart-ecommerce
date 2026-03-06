@@ -3,8 +3,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductCard from "../components/ProductCard";
 import { ArrowLeft, SlidersHorizontal, X, Search } from "lucide-react";
+import API from "../api";
 
-const API = import.meta.env.VITE_API_URL;
+
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -27,58 +28,28 @@ export default function SearchResultsPage() {
   const [selectedAvailability, setSelectedAvailability] = useState([]);
 
   useEffect(() => {
-    if (!searchTerm) return;
-    setLoading(true);
-    fetch(`${API}/api/products/search?q=${encodeURIComponent(searchTerm)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        const arr = Array.isArray(data) ? data : [];
-        setResults(arr);
-        setFilteredResults(arr);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [searchTerm]);
+  if (!searchTerm) return;
 
-  useEffect(() => {
-    let filtered = [...results];
-    if (selectedBrands.length)
-      filtered = filtered.filter((p) =>
-        selectedBrands.includes(p.brand?.trim() || "Unknown Brand"),
+  const fetchSearch = async () => {
+    try {
+      setLoading(true);
+
+      const { data } = await API.get(
+        `/api/products/search?q=${encodeURIComponent(searchTerm)}`
       );
-    if (selectedPrices.length)
-      filtered = filtered.filter((p) => {
-        const price = p.finalPrice || p.discountedPrice || p.price;
-        return selectedPrices.some((r) =>
-          r === "200+" ? price >= 200 : price <= parseInt(r),
-        );
-      });
-    if (selectedDiscounts.length)
-      filtered = filtered.filter((p) =>
-        selectedDiscounts.some((d) => p.extraDiscountApplied >= parseInt(d)),
-      );
-    if (selectedAvailability.length)
-      filtered = filtered.filter((p) => {
-        if (selectedAvailability.includes("instock") && p.quantity > 10)
-          return true;
-        if (
-          selectedAvailability.includes("lowstock") &&
-          p.quantity <= 10 &&
-          p.quantity > 0
-        )
-          return true;
-        if (selectedAvailability.includes("outofstock") && p.quantity === 0)
-          return true;
-        return false;
-      });
-    setFilteredResults(filtered);
-  }, [
-    selectedBrands,
-    selectedPrices,
-    selectedDiscounts,
-    selectedAvailability,
-    results,
-  ]);
+
+      const arr = Array.isArray(data) ? data : [];
+      setResults(arr);
+      setFilteredResults(arr);
+    } catch (err) {
+      console.error("Search error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchSearch();
+}, [searchTerm]);
 
   const allBrands = Array.from(
     new Set(results.map((p) => p.brand?.trim() || "Unknown Brand")),

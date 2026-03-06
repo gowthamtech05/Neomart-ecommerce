@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import API from "../api";
 import {
   ChevronLeft,
   Package,
@@ -274,8 +274,11 @@ const DeliveryPartnerSection = ({ order, onRefresh }) => {
         order.shippingAddress?.postalCode ||
         order.shippingAddress?.pincode ||
         "";
-      const url = `http://localhost:5000/api/delivery-partners/admin/active${pincode ? "?pincode=" + pincode : ""}`;
-      const { data } = await axios.get(url, { withCredentials: true });
+
+      const url = `/api/delivery-partners/admin/active${pincode ? "?pincode=" + pincode : ""}`;
+
+      const { data } = await API.get(url);
+
       setPartners(Array.isArray(data) ? data : []);
     } catch {
     } finally {
@@ -287,11 +290,10 @@ const DeliveryPartnerSection = ({ order, onRefresh }) => {
     if (!selected) return;
     setAssigning(true);
     try {
-      await axios.put(
-        "http://localhost:5000/api/delivery-partners/admin/orders/assign",
-        { partnerId: selected, orderIds: [order._id] },
-        { withCredentials: true },
-      );
+      await API.put("/api/delivery-partners/admin/orders/assign", {
+        partnerId: selected,
+        orderIds: [order._id],
+      });
       setShowSelect(false);
       onRefresh();
     } catch (err) {
@@ -305,10 +307,8 @@ const DeliveryPartnerSection = ({ order, onRefresh }) => {
     if (!window.confirm("Remove this delivery partner from the order?")) return;
     setUnassigning(true);
     try {
-      await axios.put(
-        `http://localhost:5000/api/delivery-partners/admin/orders/${order._id}/unassign`,
-        {},
-        { withCredentials: true },
+      await API.put(
+        `/api/delivery-partners/admin/orders/${order._id}/unassign`,
       );
       onRefresh();
     } catch (err) {
@@ -677,10 +677,7 @@ const AdminOrderDetails = () => {
   const fetchOrder = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(
-        `http://localhost:5000/api/orders/admin/${id}`,
-        { withCredentials: true },
-      );
+      const { data } = await API.get(`/api/orders/admin/${id}`);
       setOrder(data);
     } catch {
       setError("Order not found ❌");
@@ -698,9 +695,10 @@ const AdminOrderDetails = () => {
       setBtnLoading(true);
       const url =
         action === "cancel"
-          ? `http://localhost:5000/api/orders/admin/${id}/cancel`
-          : `http://localhost:5000/api/orders/${id}/${action}`;
-      await axios.put(url, {}, { withCredentials: true });
+          ? `/api/orders/admin/${id}/cancel`
+          : `/api/orders/${id}/${action}`;
+
+      await API.put(url);
       fetchOrder();
     } catch (err) {
       alert(err.response?.data?.message || `Failed to ${action} order`);

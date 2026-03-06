@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
+import API from "../api/api";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -76,11 +77,11 @@ const Cart = () => {
     fullAddress: "",
     pinCode: "",
     phone: "",
+    district: "",
   });
   const [locating, setLocating] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
   const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
-  const config = useMemo(() => ({ withCredentials: true }), []);
 
   const isNewUser = dbUser?.firstOrderCompleted === false;
   const loyaltyPoints = Number(dbUser?.loyaltyPoints || 0);
@@ -90,10 +91,7 @@ const Cart = () => {
     const syncUser = async () => {
       if (!userInfo?._id) return;
       try {
-        const { data } = await axios.get(
-          "http://localhost:5000/api/users/profile",
-          config,
-        );
+        const { data } = await API.get("/api/users/profile");
         setDbUser(data);
         if (data.addresses?.length > 0) setSelectedAddress(data.addresses[0]);
       } catch (err) {
@@ -108,7 +106,7 @@ const Cart = () => {
       s.async = true;
       document.body.appendChild(s);
     }
-  }, [config, fetchCart]);
+  }, [fetchCart]);
 
   const cartWithPrices = useMemo(() => {
     if (!cartItems.length) return [];
@@ -173,11 +171,7 @@ const Cart = () => {
   const updateQuantity = async (productId, qty) => {
     if (qty < 1) return;
     try {
-      await axios.put(
-        `http://localhost:5000/api/cart/${productId}`,
-        { quantity: qty },
-        config,
-      );
+      await API.put(`/api/cart/${productId}`, { quantity: Number(qty) });
       setCartItems(
         cartItems.map((i) =>
           (i.product?._id || i.product) === productId
@@ -192,7 +186,7 @@ const Cart = () => {
 
   const removeFromCart = async (productId) => {
     try {
-      await axios.delete(`http://localhost:5000/api/cart/${productId}`, config);
+      await API.delete(`/api/cart/${productId}`);
       setCartItems(
         cartItems.filter((i) => (i.product?._id || i.product) !== productId),
       );
@@ -236,11 +230,7 @@ const Cart = () => {
     )
       return alert("Fill all fields");
     try {
-      const { data } = await axios.post(
-        "http://localhost:5000/api/users/address",
-        addressInput,
-        config,
-      );
+      const { data } = await API.post("/api/users/address", addressInput);
       setDbUser({ ...dbUser, addresses: data });
       setSelectedAddress(data[data.length - 1]);
       setAddressInput({
@@ -257,17 +247,16 @@ const Cart = () => {
   const saveEditedAddress = async () => {
     if (!editingAddress) return;
     if (
-      !editingAddress.fullAddress ||
-      !editingAddress.pinCode ||
-      !editingAddress.phone ||
-      !editingAddress.district
+      !addressInput.fullAddress ||
+      !addressInput.pinCode ||
+      !addressInput.phone ||
+      !addressInput.district
     )
       return alert("Fill all fields including district");
     try {
-      const { data } = await axios.put(
-        `http://localhost:5000/api/users/address/${editingAddress._id}`,
+      const { data } = await API.put(
+        `/api/users/address/${editingAddress._id}`,
         editingAddress,
-        config,
       );
       setDbUser({ ...dbUser, addresses: data });
       if (selectedAddress?._id === editingAddress._id) {
@@ -308,18 +297,15 @@ const Cart = () => {
     setLoading(true);
     try {
       if (paymentMethod === "ONLINE") {
-        const { data: orderData } = await axios.post(
-          "http://localhost:5000/api/orders",
+        const { data: orderData } = await API.post(
+          "/api/orders",
           buildOrderPayload("ONLINE", false),
-          config,
         );
         const mongoOrderId = orderData._id;
 
-        const { data: rzpData } = await axios.post(
-          "http://localhost:5000/api/payment/create-order",
-          { amount: grandTotal },
-          config,
-        );
+        const { data: rzpData } = await API.post("/api/payment/create-order", {
+          amount: grandTotal,
+        });
 
         new window.Razorpay({
           key: rzpData.key,
@@ -329,17 +315,13 @@ const Cart = () => {
           order_id: rzpData.id,
           handler: async (res) => {
             try {
-              await axios.post(
-                "http://localhost:5000/api/orders/verify",
-                {
-                  razorpay_order_id: res.razorpay_order_id,
-                  razorpay_payment_id: res.razorpay_payment_id,
-                  razorpay_signature: res.razorpay_signature,
-                  orderId: mongoOrderId,
-                },
-                config,
-              );
-              await axios.delete("http://localhost:5000/api/cart", config);
+              await API.post("/api/orders/verify", {
+                razorpay_order_id: res.razorpay_order_id,
+                razorpay_payment_id: res.razorpay_payment_id,
+                razorpay_signature: res.razorpay_signature,
+                orderId: mongoOrderId,
+              });
+              await API.delete("/api/cart");
               setCartItems([]);
               setOrderSuccess(true);
             } catch (err) {
@@ -349,13 +331,13 @@ const Cart = () => {
 
               if (status === 401) {
                 try {
-                  await axios.post("http://localhost:5000/api/orders/verify", {
+                  await API.post("/api/orders/verify", {
                     razorpay_order_id: res.razorpay_order_id,
                     razorpay_payment_id: res.razorpay_payment_id,
                     razorpay_signature: res.razorpay_signature,
                     orderId: mongoOrderId,
                   });
-                  await axios.delete("http://localhost:5000/api/cart", config);
+                  await API.delete("/api/cart");
                   setCartItems([]);
                   setOrderSuccess(true);
                   return;
@@ -378,12 +360,8 @@ const Cart = () => {
           theme: { color: "#6FAF8E" },
         }).open();
       } else {
-        await axios.post(
-          "http://localhost:5000/api/orders",
-          buildOrderPayload("COD", false),
-          config,
-        );
-        await axios.delete("http://localhost:5000/api/cart", config);
+        await API.post("/api/orders", buildOrderPayload("COD", false));
+        await API.delete("/api/cart");
         setCartItems([]);
         setOrderSuccess(true);
       }
@@ -427,7 +405,6 @@ const Cart = () => {
             My Cart
           </h1>
         </div>
-
 
         {cartItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 sm:py-24 bg-white rounded-2xl border-2 border-dashed px-6 text-center">

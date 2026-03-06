@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import API from "../api/api";
 import {
   Store,
   CheckCircle,
@@ -45,10 +45,7 @@ export default function AdminSellerRequests() {
     if (!silent) setLoading(true);
     else setPolling(true);
     try {
-      const { data } = await axios.get(
-        "http://localhost:5000/api/seller-requests/admin/all",
-        { withCredentials: true }, // ✅ cookie
-      );
+      const { data } = await API.get("/seller-requests/admin/all");
       setRequests(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch seller requests", err);
@@ -85,11 +82,9 @@ export default function AdminSellerRequests() {
       "Your request has been accepted! Let's chat about getting your products listed.";
     setActing((p) => ({ ...p, [id]: "accepting" }));
     try {
-      const { data } = await axios.put(
-        `http://localhost:5000/api/seller-requests/admin/${id}/accept`,
-        { adminReply: reply },
-        { withCredentials: true }, // ✅ cookie
-      );
+      const { data } = await API.put(`/seller-requests/admin/${id}/accept`, {
+        adminReply: reply,
+      });
       setRequests((prev) => prev.map((r) => (r._id === id ? data : r)));
       setExpanded(id);
     } catch {
@@ -107,11 +102,9 @@ export default function AdminSellerRequests() {
     }
     setActing((p) => ({ ...p, [id]: "declining" }));
     try {
-      const { data } = await axios.put(
-        `http://localhost:5000/api/seller-requests/admin/${id}/decline`,
-        { adminReply: reply },
-        { withCredentials: true }, // ✅ cookie
-      );
+      const { data } = await API.put(`/seller-requests/admin/${id}/decline`, {
+        adminReply: reply,
+      });
       setRequests((prev) => prev.map((r) => (r._id === id ? data : r)));
     } catch {
       alert("Failed to decline");
@@ -125,11 +118,10 @@ export default function AdminSellerRequests() {
     if (!msg) return;
     setActing((p) => ({ ...p, [`chat_${id}`]: true }));
     try {
-      const { data } = await axios.post(
-        `http://localhost:5000/api/seller-requests/${id}/chat`,
-        { message: msg, sender: "admin" },
-        { withCredentials: true }, // ✅ cookie
-      );
+      const { data } = await API.post(`/seller-requests/${id}/chat`, {
+        message: msg,
+        sender: "admin",
+      });
       setRequests((prev) => prev.map((r) => (r._id === id ? data : r)));
       setChatTexts((p) => ({ ...p, [id]: "" }));
     } catch {

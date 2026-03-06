@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { ChevronLeft } from "lucide-react";
 import { useCart } from "../context/CartContext";
+import API from "../api/api";
 import { useWishlist } from "../context/WishlistContext";
 import { calculateDiscountedPrice } from "../utils/offerUtils";
 import { Heart } from "lucide-react";
 import specialOfferBadge from "../assets/Offer badge.png";
-
-const API = import.meta.env.VITE_API_URL;
 
 /* ── Mini product card matching ProductCard UI ── */
 const CategoryProductCard = ({ product, isLowestPriceItem = false }) => {
@@ -197,8 +195,8 @@ const CategoryPage = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        const { data } = await axios.get(
-          `${API}/api/products?category=${encodeURIComponent(categoryName)}`,
+        const { data } = await API.get(
+          `/api/products?category=${encodeURIComponent(categoryName)}`,
         );
         setProducts(Array.isArray(data) ? data : data.products || []);
       } catch (err) {

@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import API from "../api";
 import axios from "axios";
 import { useCart } from "../context/CartContext";
 import ProductCard from "../components/ProductCard";
@@ -97,7 +98,6 @@ const ProductDetails = () => {
   const [editDiscountedPrice, setEditDiscountedPrice] = useState(0);
 
   const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
-  const config = useMemo(() => ({ withCredentials: true }), []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
@@ -110,25 +110,18 @@ const ProductDetails = () => {
       try {
         setLoading(true);
         if (userInfo?._id || true) {
-          const profileRes = await axios.get(
-            "http://localhost:5000/api/users/profile",
-            config,
-          );
+          const profileRes = await API.get("/users/profile");
           setDbUser(profileRes.data);
           if (profileRes.data.addresses?.length > 0) {
             setSelectedAddress(profileRes.data.addresses[0]);
           }
         }
 
-        const { data } = await axios.get(
-          `http://localhost:5000/api/products/${id}`,
-        );
+        const { data } = await API.get(`/products/${id}`);
         setProduct(data);
         setMainImage(data.images?.[0] || "");
 
-        const simRes = await axios.get(
-          `http://localhost:5000/api/products/category/${data.category}`,
-        );
+        const simRes = await API.get(`/products/category/${data.category}`);
         setSimilarProducts(simRes.data.filter((p) => p._id !== id));
       } catch (err) {
         console.error(err);
@@ -159,24 +152,17 @@ const ProductDetails = () => {
 
   const handleAdminUpdate = async () => {
     try {
-      await axios.put(
-        `http://localhost:5000/api/products/update/${product._id}`,
-        {
-          quantity: Number(editQuantity),
-          manufacturingDate: editMfgDate,
-          expiryDate: editExpDate,
-          brand: editBrand,
-          price: Number(editPrice),
-          discountedPrice: Number(editDiscountedPrice),
-        },
-        config,
-      );
+      await API.put(`/products/update/${product._id}`, {
+        quantity: Number(editQuantity),
+        manufacturingDate: editMfgDate,
+        expiryDate: editExpDate,
+        brand: editBrand,
+        price: Number(editPrice),
+        discountedPrice: Number(editDiscountedPrice),
+      });
       alert("Product Updated Successfully");
       setShowAdminEdit(false);
-      const { data } = await axios.get(
-        `http://localhost:5000/api/products/${id}`,
-        config,
-      );
+      const { data } = await API.get(`/products/${id}`);
       setProduct(data);
     } catch {
       alert("Update Failed");
@@ -220,11 +206,7 @@ const ProductDetails = () => {
     )
       return alert("Fill all fields including district");
     try {
-      const { data } = await axios.post(
-        "http://localhost:5000/api/users/address",
-        addressInput,
-        config,
-      );
+      const { data } = await API.post("/users/address", addressInput);
       setDbUser({ ...dbUser, addresses: data });
       setSelectedAddress(data[data.length - 1]);
       setShowAddressForm(false);
@@ -249,10 +231,9 @@ const ProductDetails = () => {
     )
       return alert("Fill all fields including district");
     try {
-      const { data } = await axios.put(
-        `http://localhost:5000/api/users/address/${editingAddress._id}`,
+      const { data } = await API.put(
+        `/users/address/${editingAddress._id}`,
         editingAddress,
-        config,
       );
       setDbUser({ ...dbUser, addresses: data });
       if (selectedAddress?._id === editingAddress._id) {
@@ -267,10 +248,7 @@ const ProductDetails = () => {
 
   const deleteAddress = async (addrId) => {
     try {
-      const { data } = await axios.delete(
-        `http://localhost:5000/api/users/address/${addrId}`,
-        config,
-      );
+      const { data } = await API.delete(`/users/address/${addrId}`);
       setDbUser({ ...dbUser, addresses: data });
       if (selectedAddress?._id === addrId) setSelectedAddress(data[0] || null);
     } catch {
@@ -345,18 +323,12 @@ const ProductDetails = () => {
           isPaid: false,
           orderStatus: "Not Paid",
         };
-        const { data: orderData } = await axios.post(
-          "http://localhost:5000/api/orders",
-          orderPayload,
-          config,
-        );
+        const { data: orderData } = await API.post("/orders", orderPayload);
         const mongoOrderId = orderData._id;
 
-        const { data: rzpData } = await axios.post(
-          "http://localhost:5000/api/payment/create-order",
-          { amount: finalPrice + deliveryCharge },
-          config,
-        );
+        const { data: rzpData } = await API.post("/payment/create-order", {
+          amount: finalPrice + deliveryCharge,
+        });
         const options = {
           key: rzpData.key,
           amount: rzpData.amount,
@@ -365,16 +337,12 @@ const ProductDetails = () => {
           order_id: rzpData.id,
           handler: async (res) => {
             try {
-              await axios.post(
-                "http://localhost:5000/api/orders/verify",
-                {
-                  razorpay_order_id: res.razorpay_order_id,
-                  razorpay_payment_id: res.razorpay_payment_id,
-                  razorpay_signature: res.razorpay_signature,
-                  orderId: mongoOrderId,
-                },
-                config,
-              );
+              await API.post("/orders/verify", {
+                razorpay_order_id: res.razorpay_order_id,
+                razorpay_payment_id: res.razorpay_payment_id,
+                razorpay_signature: res.razorpay_signature,
+                orderId: mongoOrderId,
+              });
               setOrderSuccess(true);
               setShowPaymentModal(false);
             } catch (err) {
@@ -427,7 +395,7 @@ const ProductDetails = () => {
     };
 
     try {
-      await axios.post("http://localhost:5000/api/orders", orderData, config);
+      await API.post("/orders", orderData);
       setOrderSuccess(true);
       setShowPaymentModal(false);
     } catch {
@@ -475,7 +443,7 @@ const ProductDetails = () => {
           src={
             mainImage?.startsWith("http")
               ? mainImage
-              : `http://localhost:5000${mainImage}`
+              : `${import.meta.env.VITE_API_URL.replace("/api", "")}${mainImage}`
           }
           className="h-96 object-contain"
           alt={product.name}

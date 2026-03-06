@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Pin, PinOff, ArrowLeft, LayoutGrid } from "lucide-react";
+import API from "../api";
 
 const CACHE_KEY = "neomart_home";
 const bustCache = () => sessionStorage.removeItem(CACHE_KEY);
@@ -14,10 +15,7 @@ const AdminProductsPage = () => {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/products", {
-        credentials: "include",
-      });
-      const data = await res.json();
+      const { data } = await API.get("/api/products");
       setAllProducts(data);
       bustCache();
     } catch (err) {
@@ -39,23 +37,14 @@ const AdminProductsPage = () => {
   const togglePin = async (productId) => {
     setTogglingId(productId);
     try {
-      const res = await fetch(
-        `http://localhost:5000/api/products/${productId}/pin`,
-        {
-          method: "PUT",
-          credentials: "include",
-        },
-      );
-      if (!res.ok) {
-        alert("Failed to toggle pin");
-        return;
-      }
-      const data = await res.json();
+      const { data } = await API.put(`/api/products/${productId}/pin`);
+
       setAllProducts((prev) =>
         prev.map((p) =>
           p._id === productId ? { ...p, isPinned: data.isPinned } : p,
         ),
       );
+
       bustCache();
     } catch (err) {
       console.error("Toggle failed:", err);
@@ -169,7 +158,7 @@ const AdminProductsPage = () => {
               const imgPath = product.images?.[0] || product.image;
               const imageUrl = imgPath?.startsWith("http")
                 ? imgPath
-                : `http://localhost:5000${imgPath?.startsWith("/") ? "" : "/"}${imgPath || ""}`;
+                : `${import.meta.env.VITE_API_URL}${imgPath?.startsWith("/") ? "" : "/"}${imgPath || ""}`;
               const isToggling = togglingId === product._id;
 
               return (

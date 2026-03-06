@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useLayoutEffect } from "react";
-import axios from "axios";
+import API from "../api";
 import { Link } from "react-router-dom";
 import { Package } from "lucide-react";
 
@@ -11,12 +11,7 @@ const MyOrders = () => {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const { data } = await axios.get(
-        `${import.meta.env.VITE_API_URL}/api/orders/myorders`,
-        {
-          withCredentials: true,
-        },
-      );
+      const { data } = await API.get("/api/orders/myorders");
       setOrders(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch orders:", error);
@@ -52,13 +47,7 @@ const MyOrders = () => {
     if (!window.confirm("Cancel this order?")) return;
     try {
       setLoadingCancel((prev) => ({ ...prev, [orderId]: true }));
-      await axios.put(
-        `${import.meta.env.VITE_API_URL}/api/orders/${orderId}/cancel`,
-        {},
-        {
-          withCredentials: true,
-        },
-      );
+      await API.put(`/api/orders/${orderId}/cancel`);
       alert("Order cancelled ❌");
       fetchOrders();
     } catch (error) {
@@ -70,23 +59,21 @@ const MyOrders = () => {
 
   const downloadInvoice = async (orderId) => {
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/orders/${orderId}/invoice`,
-        {
-          credentials: "include",
-        },
-      );
+      const response = await API.get(`/api/orders/${orderId}/invoice`, {
+        responseType: "blob",
+      });
 
-      if (!response.ok) throw new Error("Download failed");
-
-      const blob = await response.blob();
+      const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
+
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `invoice_${orderId}.pdf`);
+
       document.body.appendChild(link);
       link.click();
-      link.parentNode.removeChild(link);
+      link.remove();
+
       window.URL.revokeObjectURL(url);
     } catch (err) {
       alert("Invoice download failed ❌");

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import API from "../api";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Mail,
@@ -11,11 +11,6 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true,
-});
 
 const Register = () => {
   const [step, setStep] = useState(1);
@@ -59,7 +54,7 @@ const Register = () => {
     setError("");
     setLoading(true);
     try {
-      await api.post("/api/users/send-otp", { email });
+      await API.post("/api/users/send-otp", { email });
       setStep(2);
     } catch {
       setError("Failed to send OTP. Check your email and try again.");
@@ -78,7 +73,7 @@ const Register = () => {
       return;
     }
     try {
-      const { data } = await api.post("/api/users/register", {
+      const { data } = await API.post("/api/users/register", {
         name,
         email,
         password,
