@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useLayoutEffect } from "react";
-import API from "../api/api.js";
+import API from "../api/axios.js";
 import { Link } from "react-router-dom";
 import { Package } from "lucide-react";
 

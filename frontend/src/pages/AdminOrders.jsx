@@ -4,7 +4,7 @@ import React, {
   useLayoutEffect,
   useCallback,
 } from "react";
-import API from "../api/api.js";
+import API from "../api/axios.js";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Bike,

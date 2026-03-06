@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import API from "../../api/api.js";
+import API from "../../api/axios.js";
 import {
   Store,
   ImagePlus,

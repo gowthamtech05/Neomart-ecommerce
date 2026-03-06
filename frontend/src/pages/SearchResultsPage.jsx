@@ -3,9 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductCard from "../components/ProductCard";
 import { ArrowLeft, SlidersHorizontal, X, Search } from "lucide-react";
-import API from "../api/api.js";
-
-
+import API from "../api/axios.js";
 
 function useQuery() {
   return new URLSearchParams(useLocation().search);
@@ -28,28 +26,28 @@ export default function SearchResultsPage() {
   const [selectedAvailability, setSelectedAvailability] = useState([]);
 
   useEffect(() => {
-  if (!searchTerm) return;
+    if (!searchTerm) return;
 
-  const fetchSearch = async () => {
-    try {
-      setLoading(true);
+    const fetchSearch = async () => {
+      try {
+        setLoading(true);
 
-      const { data } = await API.get(
-        `/api/products/search?q=${encodeURIComponent(searchTerm)}`
-      );
+        const { data } = await API.get(
+          `/api/products/search?q=${encodeURIComponent(searchTerm)}`,
+        );
 
-      const arr = Array.isArray(data) ? data : [];
-      setResults(arr);
-      setFilteredResults(arr);
-    } catch (err) {
-      console.error("Search error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const arr = Array.isArray(data) ? data : [];
+        setResults(arr);
+        setFilteredResults(arr);
+      } catch (err) {
+        console.error("Search error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  fetchSearch();
-}, [searchTerm]);
+    fetchSearch();
+  }, [searchTerm]);
 
   const allBrands = Array.from(
     new Set(results.map((p) => p.brand?.trim() || "Unknown Brand")),

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
-import API from "../api/api.js";
+import API from "../api/axios.js";
 
 const CACHE_KEY = "neomart_home";
 const CACHE_TTL = 5 * 60 * 1000;

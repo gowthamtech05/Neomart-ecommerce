@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import API from "../api/api.js";
+import API from "../api/axios.js";
 
 const WishlistContext = createContext();
 
