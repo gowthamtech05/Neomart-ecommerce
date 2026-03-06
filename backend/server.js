@@ -30,7 +30,7 @@ app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
 
 app.use(
   cors({
-    origin: "neomart-ecommerce.vercel.app",
+    origin: "https://neomart-ecommerce-9e89.vercel.app",
     credentials: true,
   }),
 );
