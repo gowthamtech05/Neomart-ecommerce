@@ -7,6 +7,8 @@ import { useCart } from "../context/CartContext";
 import { calculateDiscountedPrice } from "../utils/offerUtils";
 import specialOfferBadge from "../assets/Offer badge.png";
 
+const API = import.meta.env.VITE_API_URL;
+
 const WishlistProductCard = ({
   product,
   isLowestPriceItem = false,
@@ -181,10 +183,7 @@ const WishlistPage = () => {
   useEffect(() => {
     const fetchWishlist = async () => {
       try {
-        const { data } = await axios.get(
-          "http://localhost:5000/api/wishlist",
-          config,
-        );
+        const { data } = await axios.get(`${API}/api/wishlist`, config);
         setProducts(data);
       } catch (err) {
         console.error(err);
