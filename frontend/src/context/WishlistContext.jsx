@@ -10,8 +10,10 @@ export const WishlistProvider = ({ children }) => {
 
   const fetchWishlist = async () => {
     try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo") || "null");
       const { data } = await axios.get(`${API}/api/wishlist`, {
         withCredentials: true,
+        headers: { Authorization: `Bearer ${userInfo?.token}` },
       });
       setWishlist(data.map((p) => (typeof p === "object" ? p._id : p)));
     } catch (err) {
@@ -26,10 +28,14 @@ export const WishlistProvider = ({ children }) => {
         : [...prev, productId],
     );
     try {
+      const userInfo = JSON.parse(localStorage.getItem("userInfo") || "null");
       await axios.post(
         `${API}/api/wishlist/${productId}`,
         {},
-        { withCredentials: true },
+        {
+          withCredentials: true,
+          headers: { Authorization: `Bearer ${userInfo?.token}` },
+        },
       );
     } catch (err) {
       fetchWishlist();
