@@ -12,7 +12,7 @@ const MyOrders = () => {
     try {
       setLoading(true);
       const { data } = await axios.get(
-        "http://localhost:5000/api/orders/myorders",
+        `${import.meta.env.VITE_API_URL}/api/orders/myorders`,
         {
           withCredentials: true,
         },
@@ -53,7 +53,7 @@ const MyOrders = () => {
     try {
       setLoadingCancel((prev) => ({ ...prev, [orderId]: true }));
       await axios.put(
-        `http://localhost:5000/api/orders/${orderId}/cancel`,
+        `${import.meta.env.VITE_API_URL}/api/orders/${orderId}/cancel`,
         {},
         {
           withCredentials: true,
@@ -71,7 +71,7 @@ const MyOrders = () => {
   const downloadInvoice = async (orderId) => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/orders/${orderId}/invoice`,
+        `${import.meta.env.VITE_API_URL}/api/orders/${orderId}/invoice`,
         {
           credentials: "include",
         },
