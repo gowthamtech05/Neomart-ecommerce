@@ -113,9 +113,9 @@ const OrderDetails = () => {
     try {
       setLoading(true);
       const { data } = await axios.get(
-        `http://localhost:5000/api/orders/${id}`,
+        `${import.meta.env.VITE_API_URL}/api/orders/${id}`,
         {
-          withCredentials: true, 
+          withCredentials: true,
         },
       );
       setOrder(data);
@@ -137,7 +137,7 @@ const OrderDetails = () => {
   const downloadInvoice = async () => {
     try {
       const response = await fetch(
-        `http://localhost:5000/api/orders/${order._id}/invoice`,
+        `${import.meta.env.VITE_API_URL}/api/orders/${order._id}/invoice`,
         {
           credentials: "include",
         },
