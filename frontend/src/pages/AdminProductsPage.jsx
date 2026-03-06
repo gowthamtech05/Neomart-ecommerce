@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Pin, PinOff, ArrowLeft, LayoutGrid } from "lucide-react";
-import API from "../api/api";
+import API from "../api/api.js";
 
 const CACHE_KEY = "neomart_home";
 const bustCache = () => sessionStorage.removeItem(CACHE_KEY);

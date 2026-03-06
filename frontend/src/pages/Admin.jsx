@@ -1,5 +1,5 @@
 import { useState } from "react";
-import API from "../api/api"; // <-- use your centralized API instance
+import API from "../api/api.js"; // <-- use your centralized API instance
 import {
   Package,
   Tag,

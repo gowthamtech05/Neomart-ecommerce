@@ -1,5 +1,5 @@
 import { useState } from "react";
-import API from "../api/api";
+import API from "../api/api.js";
 import { useNavigate, Link } from "react-router-dom";
 import {
   Mail,

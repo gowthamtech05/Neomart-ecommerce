@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import API from "../api/api";
+import API from "../api/api.js";
 import {
   ChevronLeft,
   Package,

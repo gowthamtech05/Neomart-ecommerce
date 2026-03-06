@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductCard from "../components/ProductCard";
 import { ArrowLeft, SlidersHorizontal, X, Search } from "lucide-react";
-import API from "../api/api";
+import API from "../api/api.js";
 
 
 
