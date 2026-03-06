@@ -3,12 +3,14 @@ import axios from "axios";
 
 const WishlistContext = createContext();
 
+const API = import.meta.env.VITE_API_URL;
+
 export const WishlistProvider = ({ children }) => {
   const [wishlist, setWishlist] = useState([]);
 
   const fetchWishlist = async () => {
     try {
-      const { data } = await axios.get("http://localhost:5000/api/wishlist", {
+      const { data } = await axios.get(`${API}/api/wishlist`, {
         withCredentials: true,
       });
       setWishlist(data.map((p) => (typeof p === "object" ? p._id : p)));
@@ -25,7 +27,7 @@ export const WishlistProvider = ({ children }) => {
     );
     try {
       await axios.post(
-        `http://localhost:5000/api/wishlist/${productId}`,
+        `${API}/api/wishlist/${productId}`,
         {},
         { withCredentials: true },
       );
