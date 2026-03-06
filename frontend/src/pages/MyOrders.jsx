@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useLayoutEffect } from "react";
-import API from "../api";
+import API from "../api/api";
 import { Link } from "react-router-dom";
 import { Package } from "lucide-react";
 

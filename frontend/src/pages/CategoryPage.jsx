@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
-import API from "../api";
+import API from "../api/api";
 
 const CategoryPage = () => {
   const { categoryName } = useParams();

@@ -4,7 +4,7 @@ import React, {
   useLayoutEffect,
   useCallback,
 } from "react";
-import API from "../api";
+import API from "../api/api";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Bike,
