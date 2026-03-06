@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import ProductCard from "../components/ProductCard";
 import axios from "axios";
 
+const API = import.meta.env.VITE_API_URL;
+
 const CACHE_KEY = "neomart_home";
 const CACHE_TTL = 5 * 60 * 1000;
 
@@ -77,9 +79,9 @@ const Home = ({ search = "" }) => {
 
     try {
       const [prodRes, adsRes, offRes] = await Promise.all([
-        fetch("http://localhost:5000/api/products", { credentials: "include" }),
-        fetch("http://localhost:5000/api/ads"),
-        fetch("http://localhost:5000/api/offers"),
+        fetch(`${API}/api/products`, { credentials: "include" }),
+        fetch(`${API}/api/ads`),
+        fetch(`${API}/api/offers`),
       ]);
       const [products, ads, offers] = await Promise.all([
         prodRes.json(),
@@ -111,7 +113,7 @@ const Home = ({ search = "" }) => {
   const handleRemoveFromHome = async (id) => {
     if (!window.confirm("Remove this product from homepage?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/products/${id}/pin`, {
+      const res = await fetch(`${API}/api/products/${id}/pin`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -135,7 +137,7 @@ const Home = ({ search = "" }) => {
     const formData = new FormData();
     formData.append("image", file);
     try {
-      await axios.post("http://localhost:5000/api/ads", formData, {
+      await axios.post(`${API}/api/ads`, formData, {
         withCredentials: true,
       });
       bustCache();
@@ -148,7 +150,7 @@ const Home = ({ search = "" }) => {
   const handleDeleteAd = async (id) => {
     if (!window.confirm("Delete this ad?")) return;
     try {
-      await axios.delete(`http://localhost:5000/api/ads/${id}`, {
+      await axios.delete(`${API}/api/ads/${id}`, {
         withCredentials: true,
       });
       bustCache();
@@ -160,7 +162,7 @@ const Home = ({ search = "" }) => {
 
   const updateOfferLink = async (id, newLink) => {
     try {
-      await fetch(`http://localhost:5000/api/offers/${id}`, {
+      await fetch(`${API}/api/offers/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -177,7 +179,7 @@ const Home = ({ search = "" }) => {
     const fd = new FormData();
     fd.append("image", file);
     try {
-      await fetch(`http://localhost:5000/api/offers/${id}`, {
+      await fetch(`${API}/api/offers/${id}`, {
         method: "PUT",
         credentials: "include",
         body: fd,
@@ -191,7 +193,7 @@ const Home = ({ search = "" }) => {
 
   const deleteOffer = async (id) => {
     if (!window.confirm("Delete this offer?")) return;
-    await fetch(`http://localhost:5000/api/offers/${id}`, {
+    await fetch(`${API}/api/offers/${id}`, {
       method: "DELETE",
       credentials: "include",
     });
@@ -302,7 +304,7 @@ const Home = ({ search = "" }) => {
                   if (!file) return;
                   const fd = new FormData();
                   fd.append("image", file);
-                  await fetch("http://localhost:5000/api/offers", {
+                  await fetch(`${API}/api/offers`, {
                     method: "POST",
                     credentials: "include",
                     body: fd,
