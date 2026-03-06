@@ -12,9 +12,8 @@ import {
   EyeOff,
 } from "lucide-react";
 
-
 const api = axios.create({
-  baseURL: "http://localhost:5000",
+  baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true,
 });
 
@@ -232,7 +231,6 @@ const Register = () => {
                   className="w-full pl-10 pr-4 py-3 text-sm border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-[#6FAF8E]/40 focus:border-[#6FAF8E] transition bg-gray-50"
                 />
               </div>
-
 
               <div className="space-y-2">
                 <div className="relative">
