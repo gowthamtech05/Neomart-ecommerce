@@ -18,7 +18,6 @@ import wishlistRoutes from "./routes/wishlistRoutes.js";
 import connectDB from "./config/db.js";
 import sellerRequestRoutes from "./routes/sellerRequestRoutes.js";
 import deliveryPartnerRoutes from "./routes/deliveryPartnerRoutes.js";
-
 import cookieParser from "cookie-parser";
 
 const app = express();
@@ -28,12 +27,39 @@ const __dirname = path.dirname(__filename);
 
 app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
 
+// FIX: Proper CORS — allows iOS Safari, handles preflight OPTIONS correctly
+const allowedOrigins = [
+  "https://neomart-ecommerce-uy2w.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+
 app.use(
   cors({
-    origin: "https://neomart-ecommerce-uy2w.vercel.app",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (mobile apps, curl, Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
-  })
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+      "Origin",
+    ],
+    exposedHeaders: ["Set-Cookie"],
+    optionsSuccessStatus: 200, // FIX: Some iOS browsers choke on 204
+  }),
 );
+
+// FIX: Handle preflight OPTIONS requests explicitly — iOS Safari always sends these
+app.options("*", cors());
 
 app.use(cookieParser());
 app.use(express.json());
@@ -60,7 +86,6 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/seller-requests", sellerRequestRoutes);
 app.use("/api/delivery-partners", deliveryPartnerRoutes);
-
 
 app.use((err, req, res, next) => {
   console.error("GLOBAL ERROR:", err);
