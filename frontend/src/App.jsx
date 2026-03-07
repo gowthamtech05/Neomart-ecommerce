@@ -421,10 +421,13 @@ function MobileDrawer({
                 <button
                   onClick={async () => {
                     try {
-                      await fetch("http://localhost:5000/api/users/logout", {
-                        method: "POST",
-                        credentials: "include",
-                      });
+                      await fetch(
+                        `${import.meta.env.VITE_API_URL}/api/users/logout`,
+                        {
+                          method: "POST",
+                          credentials: "include",
+                        },
+                      );
                     } catch (err) {
                       console.error("Logout error:", err);
                     } finally {
@@ -538,7 +541,7 @@ function AppContent() {
     }
     try {
       const res = await fetch(
-        `http://localhost:5000/api/products/suggestions?q=${query}`,
+        `${import.meta.env.VITE_API_URL}/api/products/suggestions?q=${query}`,
       );
       const data = await res.json();
       setSuggestions((Array.isArray(data) ? data : []).slice(0, 3));
@@ -551,7 +554,7 @@ function AppContent() {
 
   const handleLogout = async () => {
     try {
-      await fetch("http://localhost:5000/api/users/logout", {
+      await fetch(`${import.meta.env.VITE_API_URL}/api/users/logout`, {
         method: "POST",
         credentials: "include",
       });
@@ -577,21 +580,13 @@ function AppContent() {
         orders.filter((o) => o.isCancelled && o.isPaid && !o.isRefunded).length,
       );
 
-      const dRes = await fetch(
-        "http://localhost:5000/api/orders/admin/dashboard",
-        {
-          credentials: "include",
-        },
-      );
+      const dRes = await API.get("/api/orders/admin/dashboard");
       const dData = await dRes.json();
       if (dData.lowStockProducts)
         setLowStockCount(dData.lowStockProducts.length);
 
       const sRes = await fetch(
-        "http://localhost:5000/api/seller-requests/admin/all",
-        {
-          credentials: "include",
-        },
+        `${import.meta.env.VITE_API_URL}/api/seller-requests/admin/all`,
       );
       const sData = await sRes.json();
       setSellerRequestCount(
@@ -601,10 +596,7 @@ function AppContent() {
       );
 
       const pRes = await fetch(
-        "http://localhost:5000/api/delivery-partners/admin/pending-count",
-        {
-          credentials: "include",
-        },
+        `${import.meta.env.VITE_API_URL}/api/delivery-partners/admin/pending-count`,
       );
       const pData = await pRes.json();
       setPartnerRequestCount(pData.count || 0);

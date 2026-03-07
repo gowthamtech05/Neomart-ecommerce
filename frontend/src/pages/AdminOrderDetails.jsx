@@ -927,7 +927,7 @@ const AdminOrderDetails = () => {
                       src={
                         item.image?.startsWith("http")
                           ? item.image
-                          : `http://localhost:5000${item.image}`
+                          : `${import.meta.env.VITE_API_URL}${item.image}`
                       }
                       className="w-10 h-10 sm:w-12 sm:h-12 object-contain bg-white rounded-lg p-1 shrink-0"
                       alt=""
