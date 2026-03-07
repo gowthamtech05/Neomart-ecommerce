@@ -57,9 +57,12 @@ export default function AdminDeliveryPartners() {
       replyTexts[id]?.trim() || "Welcome to the NeoMart delivery team!";
     setActing((p) => ({ ...p, [id]: "accepting" }));
     try {
-      const { data } = await API.put(`/delivery-partners/admin/${id}/accept`, {
-        adminReply: reply,
-      });
+      const { data } = await API.put(
+        `/api/delivery-partners/admin/${id}/accept`,
+        {
+          adminReply: reply,
+        },
+      );
       setPartners((prev) => prev.map((p) => (p._id === id ? data : p)));
     } catch {
       alert("Failed to accept");
@@ -76,9 +79,12 @@ export default function AdminDeliveryPartners() {
     }
     setActing((p) => ({ ...p, [id]: "declining" }));
     try {
-      const { data } = await API.put(`/delivery-partners/admin/${id}/decline`, {
-        adminReply: reply,
-      });
+      const { data } = await API.put(
+        `/api/delivery-partners/admin/${id}/decline`,
+        {
+          adminReply: reply,
+        },
+      );
       setPartners((prev) => prev.map((p) => (p._id === id ? data : p)));
     } catch {
       alert("Failed to decline");
