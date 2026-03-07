@@ -110,7 +110,7 @@ const ProductDetails = () => {
       try {
         setLoading(true);
         if (userInfo?._id || true) {
-          const profileRes = await API.get("/users/profile");
+          const profileRes = await API.get("/api/users/profile");
           setDbUser(profileRes.data);
           if (profileRes.data.addresses?.length > 0) {
             setSelectedAddress(profileRes.data.addresses[0]);
