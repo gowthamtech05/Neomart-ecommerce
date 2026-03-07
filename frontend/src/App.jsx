@@ -9,7 +9,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
-import API from "./api/axios";
+import API from "./api/axios.js";
 
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
