@@ -545,7 +545,7 @@ function AppContent() {
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/api/products/suggestions?q=${query}`,
       );
-      const data = res.data;
+      const data = await res.json();
       setSuggestions((Array.isArray(data) ? data : []).slice(0, 3));
       setShowSuggestions(true);
     } catch {
@@ -571,26 +571,33 @@ function AppContent() {
 
   const fetchAdminAlerts = useCallback(async () => {
     if (!isAdmin) return;
+
     try {
       const oRes = await API.get("/api/orders/admin");
-      const oData = await oRes.json();
+      const oData = oRes.data;
+
       const orders = Array.isArray(oData.orders) ? oData.orders : oData;
+
       setDeliveryAlertCount(
         orders.filter((o) => !o.isDelivered && !o.isCancelled).length,
       );
+
       setRefundAlertCount(
         orders.filter((o) => o.isCancelled && o.isPaid && !o.isRefunded).length,
       );
 
       const dRes = await API.get("/api/orders/admin/dashboard");
-      const dData = await dRes.json();
-      if (dData.lowStockProducts)
+      const dData = dRes.data;
+
+      if (dData.lowStockProducts) {
         setLowStockCount(dData.lowStockProducts.length);
+      }
 
       const sRes = await fetch(
         `${import.meta.env.VITE_API_URL}/api/seller-requests/admin/all`,
       );
       const sData = await sRes.json();
+
       setSellerRequestCount(
         (Array.isArray(sData) ? sData : []).filter(
           (r) => r.status === "pending",
@@ -601,6 +608,7 @@ function AppContent() {
         `${import.meta.env.VITE_API_URL}/api/delivery-partners/admin/pending-count`,
       );
       const pData = await pRes.json();
+
       setPartnerRequestCount(pData.count || 0);
     } catch (err) {
       console.error("Badge fetch error:", err);
