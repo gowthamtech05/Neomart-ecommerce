@@ -119,10 +119,13 @@ export default function AdminSellerRequests() {
     if (!msg) return;
     setActing((p) => ({ ...p, [`chat_${id}`]: true }));
     try {
-      const { data } = await API.post(`/seller-requests/${id}/chat`, {
-        message: msg,
-        sender: "admin",
-      });
+      const { data } = await API.post(
+        `/api/seller-requests/${requestId}/chat`,
+        {
+          message: msg,
+          sender: "admin",
+        },
+      );
       setRequests((prev) => prev.map((r) => (r._id === id ? data : r)));
       setChatTexts((p) => ({ ...p, [id]: "" }));
     } catch {
