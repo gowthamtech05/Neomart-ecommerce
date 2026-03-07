@@ -60,6 +60,29 @@ const TN_DISTRICTS = [
   "Virudhunagar",
 ];
 
+// Safe image URL builder — avoids double-slash on mobile
+function buildImageUrl(src) {
+  if (!src) return "";
+  if (src.startsWith("http://") || src.startsWith("https://")) return src;
+  const base = (import.meta.env.VITE_API_URL || "")
+    .replace(/\/api\/?$/, "")
+    .replace(/\/$/, "");
+  const path = src.startsWith("/") ? src : `/${src}`;
+  return `${base}${path}`;
+}
+
+// Safe Razorpay loader — waits for SDK on mobile browsers
+function loadRazorpay() {
+  return new Promise((resolve) => {
+    if (window.Razorpay) return resolve(true);
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
 const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -75,10 +98,12 @@ const ProductDetails = () => {
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
+  // FIX: Read userInfo inside useEffect/useMemo — never at module top level
+  const [userInfo, setUserInfo] = useState({});
+
   // Address & User Sync
   const [dbUser, setDbUser] = useState(null);
   const [selectedAddress, setSelectedAddress] = useState(null);
-  const [showAddressForm, setShowAddressForm] = useState(false);
   const [locating, setLocating] = useState(false);
   const [addressInput, setAddressInput] = useState({
     fullAddress: "",
@@ -97,11 +122,19 @@ const ProductDetails = () => {
   const [editPrice, setEditPrice] = useState(0);
   const [editDiscountedPrice, setEditDiscountedPrice] = useState(0);
 
-  const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+  // FIX: Safe localStorage read inside useEffect
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("userInfo");
+      setUserInfo(raw ? JSON.parse(raw) : {});
+    } catch {
+      setUserInfo({});
+    }
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
@@ -109,12 +142,10 @@ const ProductDetails = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        if (userInfo?._id || true) {
-          const profileRes = await API.get("/api/users/profile");
-          setDbUser(profileRes.data);
-          if (profileRes.data.addresses?.length > 0) {
-            setSelectedAddress(profileRes.data.addresses[0]);
-          }
+        const profileRes = await API.get("/api/users/profile");
+        setDbUser(profileRes.data);
+        if (profileRes.data.addresses?.length > 0) {
+          setSelectedAddress(profileRes.data.addresses[0]);
         }
 
         const { data } = await API.get(`/api/products/${id}`);
@@ -209,7 +240,6 @@ const ProductDetails = () => {
       const { data } = await API.post("/api/users/address", addressInput);
       setDbUser({ ...dbUser, addresses: data });
       setSelectedAddress(data[data.length - 1]);
-      setShowAddressForm(false);
       setAddressInput({
         fullAddress: "",
         pinCode: "",
@@ -274,11 +304,7 @@ const ProductDetails = () => {
       const result = calculateDiscountedPrice(
         product,
         { isNewUser, loyaltyPoints, isPlusMember },
-        {
-          isLowestPriceItem: true,
-          isFirstOrder: isNewUser,
-          quantityIndex: 0,
-        },
+        { isLowestPriceItem: true, isFirstOrder: isNewUser, quantityIndex: 0 },
       );
 
       return {
@@ -298,7 +324,18 @@ const ProductDetails = () => {
 
     try {
       setProcessingOrder(true);
+
       if (method === "ONLINE") {
+        // FIX: Ensure Razorpay SDK is loaded before using it (critical on mobile)
+        const loaded = await loadRazorpay();
+        if (!loaded) {
+          alert(
+            "Payment SDK failed to load. Please check your internet connection and try again.",
+          );
+          setProcessingOrder(false);
+          return;
+        }
+
         const orderPayload = {
           orderItems: [
             {
@@ -306,9 +343,9 @@ const ProductDetails = () => {
               name: product.name,
               image: product.images?.[0],
               price: finalPrice,
-              mrp: mrp,
+              mrp,
               qty: 1,
-              offerDetails: offerDetails,
+              offerDetails,
             },
           ],
           shippingAddress: {
@@ -323,18 +360,27 @@ const ProductDetails = () => {
           isPaid: false,
           orderStatus: "Not Paid",
         };
+
         const { data: orderData } = await API.post("/api/orders", orderPayload);
         const mongoOrderId = orderData._id;
 
         const { data: rzpData } = await API.post("/api/payment/create-order", {
           amount: finalPrice + deliveryCharge,
         });
+
         const options = {
           key: rzpData.key,
           amount: rzpData.amount,
           currency: "INR",
           name: "NeoMart",
           order_id: rzpData.id,
+          // FIX: Use prefill and mobile-friendly config
+          prefill: {
+            contact: selectedAddress.phone || "",
+          },
+          config: {
+            display: { hide: [], preferences: { show_default_blocks: true } },
+          },
           handler: async (res) => {
             try {
               await API.post("/api/orders/verify", {
@@ -355,16 +401,24 @@ const ProductDetails = () => {
               setShowPaymentModal(false);
             }
           },
+          modal: {
+            // FIX: Prevent modal from being stuck on mobile back gesture
+            ondismiss: () => setProcessingOrder(false),
+            escape: false,
+            backdropclose: false,
+          },
           theme: { color: "#6FAF8E" },
         };
+
         new window.Razorpay(options).open();
       } else {
         await saveOrderToDB("COD", false);
       }
-    } catch {
+    } catch (err) {
+      console.error("Order error:", err);
       alert("Order could not be processed.");
     } finally {
-      setProcessingOrder(false);
+      if (method !== "ONLINE") setProcessingOrder(false);
     }
   };
 
@@ -376,9 +430,9 @@ const ProductDetails = () => {
           name: product.name,
           image: product.images?.[0],
           price: finalPrice,
-          mrp: mrp,
+          mrp,
           qty: 1,
-          offerDetails: offerDetails,
+          offerDetails,
         },
       ],
       shippingAddress: {
@@ -400,6 +454,8 @@ const ProductDetails = () => {
       setShowPaymentModal(false);
     } catch {
       alert("Database error. Order not saved.");
+    } finally {
+      setProcessingOrder(false);
     }
   };
 
@@ -416,8 +472,8 @@ const ProductDetails = () => {
   return (
     <div className="bg-gray-100 min-h-screen pb-24 w-full">
       <nav
-        className={`bg-[#6FAF8E] p-4 text-white fixed left-0 right-0 z-50 shadow-md flex items-center justify-between transition-all ${
-          isScrolled ? "top-0" : "top-0 md:top-[65px]"
+        className={`bg-[#6FAF8E] p-4 text-white fixed left-0 right-0 z-50 shadow-md flex items-center justify-between transition-all top-0 ${
+          isScrolled ? "" : "md:top-[65px]"
         }`}
       >
         <div className="flex items-center">
@@ -436,15 +492,13 @@ const ProductDetails = () => {
         )}
       </nav>
 
-      <div className="h-16 md:h-[25px]"></div>
+      {/* FIX: Correct spacer height — nav is always at top-0 on mobile */}
+      <div className="h-16 md:h-[81px]"></div>
 
       <div className="bg-white p-6 flex justify-center border-b">
+        {/* FIX: Use safe URL builder instead of raw template literal */}
         <img
-          src={
-            mainImage?.startsWith("http")
-              ? mainImage
-              : `${import.meta.env.VITE_API_URL.replace("/api", "")}${mainImage}`
-          }
+          src={buildImageUrl(mainImage)}
           className="h-96 object-contain"
           alt={product.name}
         />
@@ -470,11 +524,9 @@ const ProductDetails = () => {
           <span className="text-2xl font-bold text-green-600">
             ₹{finalPrice}
           </span>
-
           {mrp > finalPrice && (
             <span className="line-through text-gray-400 text-lg">₹{mrp}</span>
           )}
-
           {totalDiscount > 0 && (
             <span className="text-sm text-red-500 font-semibold">
               {totalDiscount}% OFF
@@ -516,9 +568,7 @@ const ProductDetails = () => {
 
         <div className="mt-4">
           <p
-            className={`text-gray-600 text-sm ${
-              showFullDesc ? "" : "line-clamp-2"
-            }`}
+            className={`text-gray-600 text-sm ${showFullDesc ? "" : "line-clamp-2"}`}
           >
             {product.description}
           </p>
@@ -533,7 +583,11 @@ const ProductDetails = () => {
 
       <div className="mt-2 p-5 bg-white">
         <h2 className="font-bold mb-4">Similar Products</h2>
-        <div className="flex overflow-x-auto gap-4 pb-6 scrollbar-hide">
+        {/* FIX: Added -webkit-overflow-scrolling for iOS Safari touch scroll */}
+        <div
+          className="flex overflow-x-auto gap-4 pb-6 scrollbar-hide"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           {similarProducts.map((item) => (
             <div key={item._id} className="min-w-[200px]">
               <ProductCard product={item} />
@@ -560,8 +614,15 @@ const ProductDetails = () => {
       )}
 
       {showPaymentModal && (
+        // FIX: Added pb-safe and proper bottom handling for iOS home bar
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
-          <div className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div
+            className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl overflow-y-auto"
+            style={{
+              maxHeight: "90dvh", // FIX: dvh instead of vh — accounts for iOS Safari toolbar
+              paddingBottom: "env(safe-area-inset-bottom, 16px)",
+            }}
+          >
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-xl font-bold text-gray-800">Checkout</h3>
               <button onClick={() => setShowPaymentModal(false)}>
@@ -577,7 +638,11 @@ const ProductDetails = () => {
                 {dbUser?.addresses?.map((addr) => (
                   <div
                     key={addr._id}
-                    className={`border-2 rounded-xl overflow-hidden transition ${selectedAddress?._id === addr._id ? "border-[#6FAF8E]" : "border-gray-100"}`}
+                    className={`border-2 rounded-xl overflow-hidden transition ${
+                      selectedAddress?._id === addr._id
+                        ? "border-[#6FAF8E]"
+                        : "border-gray-100"
+                    }`}
                   >
                     {editingAddress?._id === addr._id ? (
                       <div className="p-3 space-y-2 bg-green-50">
@@ -653,7 +718,11 @@ const ProductDetails = () => {
                       </div>
                     ) : (
                       <div
-                        className={`p-3 flex items-start gap-2 cursor-pointer transition ${selectedAddress?._id === addr._id ? "bg-green-50" : "hover:bg-gray-50"}`}
+                        className={`p-3 flex items-start gap-2 cursor-pointer transition ${
+                          selectedAddress?._id === addr._id
+                            ? "bg-green-50"
+                            : "hover:bg-gray-50"
+                        }`}
                         onClick={() => setSelectedAddress(addr)}
                       >
                         <MapPin
@@ -691,7 +760,7 @@ const ProductDetails = () => {
                 ))}
               </div>
 
-              {/* Add New Address form */}
+              {/* Add New Address */}
               <div className="border-2 border-dashed rounded-xl p-3 space-y-2 mt-2">
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] sm:text-xs font-bold text-gray-500">
