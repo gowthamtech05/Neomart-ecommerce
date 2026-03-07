@@ -152,7 +152,7 @@ const ProductDetails = () => {
 
   const handleAdminUpdate = async () => {
     try {
-      await API.put(`/products/update/${product._id}`, {
+      await API.put(`/api/products/update/${product._id}`, {
         quantity: Number(editQuantity),
         manufacturingDate: editMfgDate,
         expiryDate: editExpDate,
@@ -162,7 +162,7 @@ const ProductDetails = () => {
       });
       alert("Product Updated Successfully");
       setShowAdminEdit(false);
-      const { data } = await API.get(`/products/${id}`);
+      const { data } = await API.get(`/api/products/${id}`);
       setProduct(data);
     } catch {
       alert("Update Failed");
@@ -206,7 +206,7 @@ const ProductDetails = () => {
     )
       return alert("Fill all fields including district");
     try {
-      const { data } = await API.post("/users/address", addressInput);
+      const { data } = await API.post("/api/users/address", addressInput);
       setDbUser({ ...dbUser, addresses: data });
       setSelectedAddress(data[data.length - 1]);
       setShowAddressForm(false);
@@ -232,7 +232,7 @@ const ProductDetails = () => {
       return alert("Fill all fields including district");
     try {
       const { data } = await API.put(
-        `/users/address/${editingAddress._id}`,
+        `/api/users/address/${editingAddress._id}`,
         editingAddress,
       );
       setDbUser({ ...dbUser, addresses: data });
@@ -248,7 +248,7 @@ const ProductDetails = () => {
 
   const deleteAddress = async (addrId) => {
     try {
-      const { data } = await API.delete(`/users/address/${addrId}`);
+      const { data } = await API.delete(`/api/users/address/${addrId}`);
       setDbUser({ ...dbUser, addresses: data });
       if (selectedAddress?._id === addrId) setSelectedAddress(data[0] || null);
     } catch {
@@ -323,10 +323,10 @@ const ProductDetails = () => {
           isPaid: false,
           orderStatus: "Not Paid",
         };
-        const { data: orderData } = await API.post("/orders", orderPayload);
+        const { data: orderData } = await API.post("/api/orders", orderPayload);
         const mongoOrderId = orderData._id;
 
-        const { data: rzpData } = await API.post("/payment/create-order", {
+        const { data: rzpData } = await API.post("/api/payment/create-order", {
           amount: finalPrice + deliveryCharge,
         });
         const options = {
@@ -337,7 +337,7 @@ const ProductDetails = () => {
           order_id: rzpData.id,
           handler: async (res) => {
             try {
-              await API.post("/orders/verify", {
+              await API.post("/api/orders/verify", {
                 razorpay_order_id: res.razorpay_order_id,
                 razorpay_payment_id: res.razorpay_payment_id,
                 razorpay_signature: res.razorpay_signature,
