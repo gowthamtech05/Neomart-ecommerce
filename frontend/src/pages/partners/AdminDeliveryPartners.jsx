@@ -34,15 +34,16 @@ export default function AdminDeliveryPartners() {
   const [polling, setPolling] = useState(false);
 
   const fetchPartners = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    else setPolling(true);
     try {
-      const { data } = await API.get("/delivery-partners/admin/all");
+      if (!silent) setLoading(true);
+      else setPolling(true);
+
+      const { data } = await API.get("/api/delivery-partners/admin/all");
       setPartners(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to fetch delivery partners", err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
       setPolling(false);
     }
   }, []);

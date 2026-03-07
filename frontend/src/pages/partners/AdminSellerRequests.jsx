@@ -44,8 +44,9 @@ export default function AdminSellerRequests() {
   const fetchRequests = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     else setPolling(true);
+
     try {
-      const { data } = await API.get("/seller-requests/admin/all");
+      const { data } = await API.get("/api/seller-requests/admin/all");
       setRequests(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch seller requests", err);
