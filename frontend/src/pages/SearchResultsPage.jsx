@@ -49,6 +49,57 @@ export default function SearchResultsPage() {
     fetchSearch();
   }, [searchTerm]);
 
+  useEffect(() => {
+    let filtered = [...results];
+
+    // Brand filter
+    if (selectedBrands.length > 0) {
+      filtered = filtered.filter((p) =>
+        selectedBrands.includes(p.brand?.trim() || "Unknown Brand"),
+      );
+    }
+
+    // Price filter
+    if (selectedPrices.length > 0) {
+      filtered = filtered.filter((p) => {
+        return selectedPrices.some((price) => {
+          if (price === "200+") return p.price >= 200;
+          return p.price <= Number(price);
+        });
+      });
+    }
+
+    // Discount filter
+    if (selectedDiscounts.length > 0) {
+      filtered = filtered.filter((p) =>
+        selectedDiscounts.some((d) => (p.discount || 0) >= Number(d)),
+      );
+    }
+
+    // Availability filter
+    if (selectedAvailability.length > 0) {
+      filtered = filtered.filter((p) => {
+        if (selectedAvailability.includes("instock")) return p.countInStock > 5;
+
+        if (selectedAvailability.includes("lowstock"))
+          return p.countInStock > 0 && p.countInStock <= 5;
+
+        if (selectedAvailability.includes("outofstock"))
+          return p.countInStock === 0;
+
+        return true;
+      });
+    }
+
+    setFilteredResults(filtered);
+  }, [
+    results,
+    selectedBrands,
+    selectedPrices,
+    selectedDiscounts,
+    selectedAvailability,
+  ]);
+
   const allBrands = Array.from(
     new Set(results.map((p) => p.brand?.trim() || "Unknown Brand")),
   );
