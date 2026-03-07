@@ -9,6 +9,8 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
+import API from "./api/axios";
+
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import Cart from "./pages/Cart";
