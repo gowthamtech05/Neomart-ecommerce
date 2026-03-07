@@ -441,17 +441,17 @@ const Home = ({ search = "" }) => {
             <div className="text-[11px] sm:text-xs md:text-sm space-y-1.5 sm:space-y-2 text-gray-400">
               <p>
                 <span className="text-gray-500">Email:</span>{" "}
-                support@neomart.com
+                gowthamtech05@gmail.com
               </p>
               <p>
-                <span className="text-gray-500">Call:</span> +91 98765 43210
+                <span className="text-gray-500">Call:</span> +91 63791 67750
               </p>
               <div className="pt-3 sm:pt-4 flex justify-center sm:justify-start gap-2 sm:gap-3">
                 <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-800 flex items-center justify-center text-[10px] sm:text-xs hover:bg-[#6FAF8E] cursor-pointer transition">
-                  ig
+                  <i class="fa-brands fa-instagram"></i>
                 </span>
                 <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-800 flex items-center justify-center text-[10px] sm:text-xs hover:bg-[#6FAF8E] cursor-pointer transition">
-                  fb
+                  <i class="fa-brands fa-facebook"></i>
                 </span>
               </div>
             </div>
