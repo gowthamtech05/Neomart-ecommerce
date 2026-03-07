@@ -545,7 +545,7 @@ function AppContent() {
       const res = await fetch(
         `${import.meta.env.VITE_API_URL}/api/products/suggestions?q=${query}`,
       );
-      const data = await res.json();
+      const data = res.data;
       setSuggestions((Array.isArray(data) ? data : []).slice(0, 3));
       setShowSuggestions(true);
     } catch {
