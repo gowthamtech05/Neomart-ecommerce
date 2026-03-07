@@ -385,6 +385,7 @@ export default function SearchResultsPage() {
 function FilterOption({ label, checked, onChange }) {
   return (
     <label
+      onClick={onChange}
       className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer border transition-all ${
         checked
           ? "border-[#6FAF8E]/30 bg-[#6FAF8E]/5"
