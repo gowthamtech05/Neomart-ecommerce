@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useLayoutEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import ProductCard from "../components/ProductCard";
@@ -25,22 +25,21 @@ export default function SearchResultsPage() {
   const [selectedDiscounts, setSelectedDiscounts] = useState([]);
   const [selectedAvailability, setSelectedAvailability] = useState([]);
 
+  // Fetch results whenever searchTerm changes
   useEffect(() => {
     if (!searchTerm) return;
 
     const fetchSearch = async () => {
       try {
         setLoading(true);
-
         const { data } = await API.get(
           `/api/products/search?q=${encodeURIComponent(searchTerm)}`,
         );
-
         const arr = Array.isArray(data) ? data : [];
         setResults(arr);
-        setFilteredResults(arr);
       } catch (err) {
         console.error("Search error:", err);
+        setResults([]);
       } finally {
         setLoading(false);
       }
@@ -49,6 +48,7 @@ export default function SearchResultsPage() {
     fetchSearch();
   }, [searchTerm]);
 
+  // Apply filters whenever results or any filter selection changes
   useEffect(() => {
     let filtered = [...results];
 
@@ -59,35 +59,40 @@ export default function SearchResultsPage() {
       );
     }
 
-    // Price filter
+    // Price filter — a product passes if it matches ANY selected range
     if (selectedPrices.length > 0) {
       filtered = filtered.filter((p) => {
-        return selectedPrices.some((price) => {
-          if (price === "200+") return p.price >= 200;
-          return p.price <= Number(price);
+        const price =
+          p.price ?? p.discountedPrice ?? p.sellingPrice ?? p.mrp ?? 0;
+        return selectedPrices.some((range) => {
+          if (range === "200+") return price >= 200;
+          return price < Number(range);
         });
       });
     }
 
-    // Discount filter
+    // Discount filter — a product passes if its discount meets ANY selected threshold
     if (selectedDiscounts.length > 0) {
-      filtered = filtered.filter((p) =>
-        selectedDiscounts.some((d) => (p.discount || 0) >= Number(d)),
-      );
+      filtered = filtered.filter((p) => {
+        const discount =
+          p.discountPercentage ??
+          p.discount ??
+          p.offer ??
+          p.discountPercent ??
+          0;
+        return selectedDiscounts.some((d) => discount >= Number(d));
+      });
     }
 
     // Availability filter
     if (selectedAvailability.length > 0) {
       filtered = filtered.filter((p) => {
-        if (selectedAvailability.includes("instock")) return p.countInStock > 5;
-
-        if (selectedAvailability.includes("lowstock"))
-          return p.countInStock > 0 && p.countInStock <= 5;
-
-        if (selectedAvailability.includes("outofstock"))
-          return p.countInStock === 0;
-
-        return true;
+        const stock = p.stock ?? p.quantity ?? p.stockQuantity ?? 0;
+        let status;
+        if (stock === 0) status = "outofstock";
+        else if (stock <= 5) status = "lowstock";
+        else status = "instock";
+        return selectedAvailability.includes(status);
       });
     }
 
@@ -329,6 +334,7 @@ export default function SearchResultsPage() {
             </button>
           </div>
         </div>
+
         {totalFilters > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-4 sm:mb-5">
             {[
