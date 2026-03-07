@@ -395,7 +395,7 @@ const ProductDetails = () => {
     };
 
     try {
-      await API.post("/orders", orderData);
+      await API.post("/api/orders", orderData);
       setOrderSuccess(true);
       setShowPaymentModal(false);
     } catch {
