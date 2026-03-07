@@ -593,10 +593,8 @@ function AppContent() {
         setLowStockCount(dData.lowStockProducts.length);
       }
 
-      const sRes = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/seller-requests/admin/all`,
-      );
-      const sData = await sRes.json();
+      const sRes = await API.get("/api/seller-requests/admin/all");
+      const sData = sRes.data;
 
       setSellerRequestCount(
         (Array.isArray(sData) ? sData : []).filter(
@@ -604,10 +602,8 @@ function AppContent() {
         ).length,
       );
 
-      const pRes = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/delivery-partners/admin/pending-count`,
-      );
-      const pData = await pRes.json();
+      const pRes = await API.get("/api/delivery-partners/admin/pending-count");
+      const pData = pRes.data;
 
       setPartnerRequestCount(pData.count || 0);
     } catch (err) {
