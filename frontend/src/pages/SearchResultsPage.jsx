@@ -126,7 +126,7 @@ export default function SearchResultsPage() {
     },
   ];
 
-  const handleToggle = (list, setList, item) => {
+  const handleToggle = (setList, item) => {
     setList((prev) =>
       prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item],
     );
@@ -225,9 +225,7 @@ export default function SearchResultsPage() {
                       key={brand}
                       label={brand}
                       checked={selectedBrands.includes(brand)}
-                      onChange={() =>
-                        handleToggle(selectedBrands, setSelectedBrands, brand)
-                      }
+                      onChange={() => handleToggle(setSelectedBrands, brand)}
                     />
                   ))}
                 {activeCategory === "Price" &&
@@ -238,9 +236,7 @@ export default function SearchResultsPage() {
                         price === "200+" ? "₹200 & Above" : `Under ₹${price}`
                       }
                       checked={selectedPrices.includes(price)}
-                      onChange={() =>
-                        handleToggle(selectedPrices, setSelectedPrices, price)
-                      }
+                      onChange={() => handleToggle(setSelectedPrices, price)}
                     />
                   ))}
                 {activeCategory === "Discount" &&
@@ -249,9 +245,7 @@ export default function SearchResultsPage() {
                       key={d}
                       label={`${d}% or more`}
                       checked={selectedDiscounts.includes(d)}
-                      onChange={() =>
-                        handleToggle(selectedDiscounts, setSelectedDiscounts, d)
-                      }
+                      onChange={() => handleToggle(setSelectedDiscounts, d)}
                     />
                   ))}
                 {activeCategory === "Availability" &&
@@ -265,11 +259,7 @@ export default function SearchResultsPage() {
                       label={item.l}
                       checked={selectedAvailability.includes(item.k)}
                       onChange={() =>
-                        handleToggle(
-                          selectedAvailability,
-                          setSelectedAvailability,
-                          item.k,
-                        )
+                        handleToggle(setSelectedAvailability, item.k)
                       }
                     />
                   ))}
