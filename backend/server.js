@@ -32,7 +32,7 @@ app.use(
   cors({
     origin: "https://neomart-ecommerce-uy2w.vercel.app",
     credentials: true,
-  }),
+  })
 );
 
 app.use(cookieParser());
