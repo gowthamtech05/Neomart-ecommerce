@@ -373,9 +373,11 @@ function AdminOrders() {
     try {
       setLoading(true);
       const { data } = await API.get("/api/orders/admin");
-      setOrders(data.orders ? data.orders : data);
-    } catch {
-      console.error("Error fetching orders");
+      // data is the array of orders directly
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error fetching orders", err);
+      alert("Failed to fetch orders from server");
     } finally {
       setLoading(false);
     }
