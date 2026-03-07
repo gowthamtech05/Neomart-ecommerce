@@ -567,9 +567,7 @@ function AppContent() {
   const fetchAdminAlerts = useCallback(async () => {
     if (!isAdmin) return;
     try {
-      const oRes = await fetch("http://localhost:5000/api/orders/admin", {
-        credentials: "include",
-      });
+      const oRes = await API.get("/api/orders/admin");
       const oData = await oRes.json();
       const orders = Array.isArray(oData.orders) ? oData.orders : oData;
       setDeliveryAlertCount(
