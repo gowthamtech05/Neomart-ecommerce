@@ -121,7 +121,7 @@ const ProductDetails = () => {
         setProduct(data);
         setMainImage(data.images?.[0] || "");
 
-        const simRes = await API.get(`/products/category/${data.category}`);
+        const simRes = await API.get(`/api/products/category/${data.category}`);
         setSimilarProducts(simRes.data.filter((p) => p._id !== id));
       } catch (err) {
         console.error(err);
