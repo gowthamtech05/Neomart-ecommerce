@@ -315,6 +315,12 @@ const Cart = () => {
           name: "NeoMart",
           order_id: rzpData.id,
           handler: async (res) => {
+            // Show success instantly — don't block on verify
+            setOrderSuccess(true);
+            setShowAddressForm(false);
+            setCartItems([]);
+
+            // Verify + cleanup silently in background
             try {
               await API.post("/api/orders/verify", {
                 razorpay_order_id: res.razorpay_order_id,
@@ -323,34 +329,12 @@ const Cart = () => {
                 orderId: mongoOrderId,
               });
               await API.delete("/api/cart");
-              setCartItems([]);
-              setOrderSuccess(true);
             } catch (err) {
-              const status = err?.response?.status;
-              const msg = err?.response?.data?.message || err.message;
-              console.error("Payment verify failed:", status, msg, err);
-
-              if (status === 401) {
-                try {
-                  await API.post("/api/orders/verify", {
-                    razorpay_order_id: res.razorpay_order_id,
-                    razorpay_payment_id: res.razorpay_payment_id,
-                    razorpay_signature: res.razorpay_signature,
-                    orderId: mongoOrderId,
-                  });
-                  await API.delete("/api/cart");
-                  setCartItems([]);
-                  setOrderSuccess(true);
-                  return;
-                } catch (retryErr) {
-                  console.error("Retry also failed:", retryErr?.response?.data);
-                }
-              }
-
-              alert(
-                `Payment received but verification failed (${status}: ${msg}).\nOrder ID: ${mongoOrderId}\nPlease contact support.`,
+              console.error(
+                "Background verify failed — Order ID:",
+                mongoOrderId,
+                err,
               );
-              setOrderSuccess(true);
             }
           },
           prefill: {

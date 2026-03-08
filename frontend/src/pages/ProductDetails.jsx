@@ -389,6 +389,12 @@ const ProductDetails = () => {
             display: { hide: [], preferences: { show_default_blocks: true } },
           },
           handler: async (res) => {
+            // Show success instantly
+            setOrderSuccess(true);
+            setShowPaymentModal(false);
+            setProcessingOrder(false);
+
+            // Verify silently in background
             try {
               await API.post("/api/orders/verify", {
                 razorpay_order_id: res.razorpay_order_id,
@@ -396,16 +402,12 @@ const ProductDetails = () => {
                 razorpay_signature: res.razorpay_signature,
                 orderId: mongoOrderId,
               });
-              setOrderSuccess(true);
-              setShowPaymentModal(false);
             } catch (err) {
-              console.error("Payment verify failed:", err);
-              alert(
-                "Payment received but verification failed. Your order is saved - please contact support with Order ID: " +
-                  mongoOrderId,
+              console.error(
+                "Background verify failed — Order ID:",
+                mongoOrderId,
+                err,
               );
-              setOrderSuccess(true);
-              setShowPaymentModal(false);
             }
           },
           modal: {
