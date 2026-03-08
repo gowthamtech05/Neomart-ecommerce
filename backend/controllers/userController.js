@@ -80,6 +80,9 @@ export const registerUser = async (req, res) => {
       loyaltyPoints: 0,
       streaks: 0,
       firstOrderCompleted: false,
+      token: jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+        expiresIn: "30d",
+      }),
     });
   } catch (error) {
     res.status(500).json({ message: "Registration failed" });
@@ -102,6 +105,9 @@ export const loginUser = async (req, res) => {
       loyaltyPoints: user.loyaltyPoints || 0,
       firstOrderCompleted: user.firstOrderCompleted || false,
       streaks: user.streaks || 0,
+      token: jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+        expiresIn: "30d",
+      }),
     });
   } else {
     res.status(401).json({ message: "Invalid email or password" });
