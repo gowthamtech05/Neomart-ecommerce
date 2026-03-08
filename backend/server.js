@@ -28,6 +28,8 @@ const __dirname = path.dirname(__filename);
 
 app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
 
+
+
 app.use(
   cors({
     origin: "https://neomart-ecommerce-uy2w.vercel.app",
@@ -47,6 +49,7 @@ app.get("/", (req, res) => res.send("API is running"));
 app.get("/test-db", async (req, res) => {
   res.json({ mongoStatus: mongoose.connection.readyState });
 });
+app.get("/health", (req, res) => res.json({ ok: true }));
 
 app.use("/api/users", userRoutes);
 app.use("/api/products", productRoutes);
