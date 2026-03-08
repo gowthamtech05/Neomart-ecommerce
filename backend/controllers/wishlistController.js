@@ -22,7 +22,6 @@ export const toggleWishlist = async (req, res) => {
 
     const { productId } = req.params;
 
-    // Validate ObjectId before querying
     if (!mongoose.Types.ObjectId.isValid(productId)) {
       return res.status(400).json({ message: "Invalid product ID" });
     }
@@ -45,7 +44,14 @@ export const toggleWishlist = async (req, res) => {
 
     res.json({ wishlist: user.wishlist });
   } catch (err) {
-    console.error("toggleWishlist error:", err.message, err.stack);
+    // THIS will show the real error in Render logs
+    console.error("toggleWishlist FULL ERROR:", {
+      message: err.message,
+      name: err.name,
+      stack: err.stack,
+      userId: req.user?._id,
+      productId: req.params?.productId,
+    });
     res.status(500).json({ message: "Toggle failed", error: err.message });
   }
 };
