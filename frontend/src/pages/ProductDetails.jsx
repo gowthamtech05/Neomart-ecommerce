@@ -146,15 +146,8 @@ const ProductDetails = () => {
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProduct = async () => {
       try {
-        setLoading(true);
-        const profileRes = await API.get("/api/users/profile");
-        setDbUser(profileRes.data);
-        if (profileRes.data.addresses?.length > 0) {
-          setSelectedAddress(profileRes.data.addresses[0]);
-        }
-
         const { data } = await API.get(`/api/products/${id}`);
         setProduct(data);
         setMainImage(data.images?.[0] || "");
@@ -162,12 +155,27 @@ const ProductDetails = () => {
         const simRes = await API.get(`/api/products/category/${data.category}`);
         setSimilarProducts(simRes.data.filter((p) => p._id !== id));
       } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
+        console.error("Product fetch error:", err);
       }
     };
-    fetchData();
+
+    const fetchProfile = async () => {
+      try {
+        const profileRes = await API.get("/api/users/profile");
+        setDbUser(profileRes.data);
+        if (profileRes.data.addresses?.length > 0) {
+          setSelectedAddress(profileRes.data.addresses[0]);
+        }
+      } catch (err) {
+        console.log("Profile not loaded (user not logged in)");
+      }
+    };
+
+    setLoading(true);
+    fetchProduct();
+    fetchProfile();
+    setLoading(false);
+
     window.scrollTo(0, 0);
   }, [id]);
 
