@@ -291,22 +291,20 @@ const Cart = () => {
       district: selectedAddress.district || "",
     },
   });
-
   const processPayment = async () => {
     if (!selectedAddress) return alert("Select a delivery address");
-    setShowAddressForm(false);
-    setLoading(true);
+    setLoading(true); // show loading immediately, keep modal open
+
     try {
       if (paymentMethod === "ONLINE") {
-        const { data: orderData } = await API.post(
-          "/api/orders",
-          buildOrderPayload("ONLINE", false),
-        );
+        // ✅ Fire both requests in parallel
+        const [{ data: orderData }, { data: rzpData }] = await Promise.all([
+          API.post("/api/orders", buildOrderPayload("ONLINE", false)),
+          API.post("/api/payment/create-order", { amount: grandTotal }),
+        ]);
         const mongoOrderId = orderData._id;
 
-        const { data: rzpData } = await API.post("/api/payment/create-order", {
-          amount: grandTotal,
-        });
+        setShowAddressForm(false); // close modal only when ready to open Razorpay
 
         new window.Razorpay({
           key: rzpData.key,
@@ -315,12 +313,10 @@ const Cart = () => {
           name: "NeoMart",
           order_id: rzpData.id,
           handler: async (res) => {
-            // Show success instantly — don't block on verify
             setOrderSuccess(true);
-            setShowAddressForm(false);
             setCartItems([]);
 
-            // Verify + cleanup silently in background
+            // background
             try {
               await API.post("/api/orders/verify", {
                 razorpay_order_id: res.razorpay_order_id,
@@ -342,9 +338,13 @@ const Cart = () => {
             email: userInfo.email,
             contact: selectedAddress.phone,
           },
+          modal: {
+            ondismiss: () => setLoading(false),
+          },
           theme: { color: "#6FAF8E" },
         }).open();
       } else {
+        // COD
         await API.post("/api/orders", buildOrderPayload("COD", false));
         await API.delete("/api/cart");
         setCartItems([]);
