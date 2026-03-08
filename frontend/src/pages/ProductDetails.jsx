@@ -480,8 +480,8 @@ const ProductDetails = () => {
       </div>
     );
 
-  const isOutOfStock = product.quantity === 0;
-  const isLowStock = product.quantity > 0 && product.quantity <= 10;
+  const isOutOfStock = product?.quantity === 0;
+  const isLowStock = product?.quantity > 0 && product?.quantity <= 10;
 
   return (
     <div className="bg-gray-100 min-h-screen pb-24 w-full">
@@ -610,7 +610,7 @@ const ProductDetails = () => {
         </div>
       </div>
 
-      {product.quantity > 0 && (
+      {product?.quantity > 0 && (
         <div className="fixed bottom-0 left-0 right-0 bg-white flex h-16 border-t z-50">
           <button
             onClick={() => addToCart({ ...product, finalPrice })}
