@@ -7,16 +7,18 @@ export const getWishlist = async (req, res) => {
       "wishlist",
       "name price discountedPrice images brand quantity views salesCount expiryDate",
     );
-    res.json(user.wishlist || []);
+    res.json(user?.wishlist || []); // ✅ safe fallback
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch wishlist" });
   }
 };
-
 export const toggleWishlist = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     const productId = req.params.productId;
+
+    // ✅ This is the fix — old users may have null wishlist
+    if (!user.wishlist) user.wishlist = [];
 
     const idx = user.wishlist.findIndex((id) => id.toString() === productId);
     if (idx === -1) {
@@ -28,6 +30,7 @@ export const toggleWishlist = async (req, res) => {
     await user.save();
     res.json({ wishlist: user.wishlist });
   } catch (err) {
-    res.status(500).json({ message: "Toggle failed" });
+    console.error("toggleWishlist error:", err.message);
+    res.status(500).json({ message: "Toggle failed", error: err.message });
   }
 };
