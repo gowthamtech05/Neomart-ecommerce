@@ -1,5 +1,5 @@
 import User from "../models/userModel.js";
-import Product from "../models/Product.js";
+import mongoose from "mongoose";
 
 export const getWishlist = async (req, res) => {
   try {
@@ -9,18 +9,25 @@ export const getWishlist = async (req, res) => {
     );
     res.json(user.wishlist || []);
   } catch (err) {
+    console.error("getWishlist error:", err);
     res.status(500).json({ message: "Failed to fetch wishlist" });
   }
 };
 
 export const toggleWishlist = async (req, res) => {
   try {
-    if (!req.user) {
+    if (!req.user?._id) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
+    const { productId } = req.params;
+
+    // Validate ObjectId before querying
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+
     const user = await User.findById(req.user._id);
-    const productId = req.params.productId;
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -29,7 +36,7 @@ export const toggleWishlist = async (req, res) => {
     const idx = user.wishlist.findIndex((id) => id.toString() === productId);
 
     if (idx === -1) {
-      user.wishlist.push(productId);
+      user.wishlist.push(new mongoose.Types.ObjectId(productId));
     } else {
       user.wishlist.splice(idx, 1);
     }
@@ -38,7 +45,7 @@ export const toggleWishlist = async (req, res) => {
 
     res.json({ wishlist: user.wishlist });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Toggle failed" });
+    console.error("toggleWishlist error:", err.message, err.stack);
+    res.status(500).json({ message: "Toggle failed", error: err.message });
   }
 };
