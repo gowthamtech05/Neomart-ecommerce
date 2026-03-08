@@ -526,6 +526,26 @@ function AppContent() {
     setIsAdmin(admin === "true");
   }, [location.pathname]);
 
+  // ✅ Force logout users with old sessions (no token = iOS won't work)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("userInfo");
+      if (!raw) return;
+      const userInfo = JSON.parse(raw);
+      if (!userInfo?.token) {
+        localStorage.removeItem("userInfo");
+        localStorage.removeItem("isAdmin");
+        setIsLoggedIn(false);
+        setIsAdmin(false);
+      }
+    } catch {
+      localStorage.removeItem("userInfo");
+      localStorage.removeItem("isAdmin");
+      setIsLoggedIn(false);
+      setIsAdmin(false);
+    }
+  }, []); // runs once on app load
+
   useEffect(() => {
     setDrawerOpen(false);
   }, [location.pathname]);
