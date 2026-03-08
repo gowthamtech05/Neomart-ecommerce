@@ -81,7 +81,13 @@ const Cart = () => {
   });
   const [locating, setLocating] = useState(false);
   const [editingAddress, setEditingAddress] = useState(null);
-  const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+  const [userInfo] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("userInfo") || "{}");
+    } catch {
+      return {};
+    }
+  });
 
   const isNewUser = dbUser?.firstOrderCompleted === false;
   const loyaltyPoints = Number(dbUser?.loyaltyPoints || 0);
@@ -98,15 +104,10 @@ const Cart = () => {
         console.error(err);
       }
     };
+
     syncUser();
     fetchCart();
-    if (!window.Razorpay) {
-      const s = document.createElement("script");
-      s.src = "https://checkout.razorpay.com/v1/checkout.js";
-      s.async = true;
-      document.body.appendChild(s);
-    }
-  }, [fetchCart]);
+  }, []);
 
   const cartWithPrices = useMemo(() => {
     if (!cartItems.length) return [];
