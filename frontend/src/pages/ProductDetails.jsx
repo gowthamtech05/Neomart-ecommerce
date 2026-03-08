@@ -333,7 +333,6 @@ const ProductDetails = () => {
       setProcessingOrder(true);
 
       if (method === "ONLINE") {
-        // FIX: Ensure Razorpay SDK is loaded before using it (critical on mobile)
         const loaded = await loadRazorpay();
         if (!loaded) {
           alert(
@@ -368,20 +367,21 @@ const ProductDetails = () => {
           orderStatus: "Not Paid",
         };
 
-        const { data: orderData } = await API.post("/api/orders", orderPayload);
+        // ✅ Parallel API calls — saves 1-3 seconds
+        const [{ data: orderData }, { data: rzpData }] = await Promise.all([
+          API.post("/api/orders", orderPayload),
+          API.post("/api/payment/create-order", {
+            amount: finalPrice + deliveryCharge,
+          }),
+        ]);
         const mongoOrderId = orderData._id;
 
-        const { data: rzpData } = await API.post("/api/payment/create-order", {
-          amount: finalPrice + deliveryCharge,
-        });
-
-        const options = {
+        new window.Razorpay({
           key: rzpData.key,
           amount: rzpData.amount,
           currency: "INR",
           name: "NeoMart",
           order_id: rzpData.id,
-          // FIX: Use prefill and mobile-friendly config
           prefill: {
             contact: selectedAddress.phone || "",
           },
@@ -389,7 +389,7 @@ const ProductDetails = () => {
             display: { hide: [], preferences: { show_default_blocks: true } },
           },
           handler: async (res) => {
-            // Show success instantly
+            // ✅ Show success instantly — don't wait for verify
             setOrderSuccess(true);
             setShowPaymentModal(false);
             setProcessingOrder(false);
@@ -411,23 +411,20 @@ const ProductDetails = () => {
             }
           },
           modal: {
-            // FIX: Prevent modal from being stuck on mobile back gesture
             ondismiss: () => setProcessingOrder(false),
             escape: false,
             backdropclose: false,
           },
           theme: { color: "#6FAF8E" },
-        };
-
-        new window.Razorpay(options).open();
+        }).open();
       } else {
+        // COD
         await saveOrderToDB("COD", false);
       }
     } catch (err) {
       console.error("Order error:", err);
       alert("Order could not be processed.");
-    } finally {
-      if (method !== "ONLINE") setProcessingOrder(false);
+      setProcessingOrder(false);
     }
   };
 
