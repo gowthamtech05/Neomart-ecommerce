@@ -146,36 +146,43 @@ const ProductDetails = () => {
   }, []);
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchAll = async () => {
+      setLoading(true);
       try {
-        const { data } = await API.get(`/api/products/${id}`);
-        setProduct(data);
-        setMainImage(data.images?.[0] || "");
+        const [productRes, profileRes] = await Promise.allSettled([
+          API.get(`/api/products/${id}`),
+          API.get("/api/users/profile"),
+        ]);
 
-        const simRes = await API.get(`/api/products/category/${data.category}`);
-        setSimilarProducts(simRes.data.filter((p) => p._id !== id));
-      } catch (err) {
-        console.error("Product fetch error:", err);
-      }
-    };
+        if (productRes.status === "fulfilled") {
+          const data = productRes.value.data;
+          setProduct(data);
+          setMainImage(data.images?.[0] || "");
+          try {
+            const simRes = await API.get(
+              `/api/products/category/${data.category}`,
+            );
+            setSimilarProducts(simRes.data.filter((p) => p._id !== id));
+          } catch {
+            setSimilarProducts([]);
+          }
+        }
 
-    const fetchProfile = async () => {
-      try {
-        const profileRes = await API.get("/api/users/profile");
-        setDbUser(profileRes.data);
-        if (profileRes.data.addresses?.length > 0) {
-          setSelectedAddress(profileRes.data.addresses[0]);
+        if (profileRes.status === "fulfilled") {
+          const profile = profileRes.value.data;
+          setDbUser(profile);
+          if (profile.addresses?.length > 0) {
+            setSelectedAddress(profile.addresses[0]);
+          }
         }
       } catch (err) {
-        console.log("Profile not loaded (user not logged in)");
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    setLoading(true);
-    fetchProduct();
-    fetchProfile();
-    setLoading(false);
-
+    fetchAll();
     window.scrollTo(0, 0);
   }, [id]);
 
