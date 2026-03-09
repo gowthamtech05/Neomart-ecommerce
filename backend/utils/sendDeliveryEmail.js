@@ -1,58 +1,42 @@
-import nodemailer from "nodemailer";
+import SibApiV3Sdk from "sib-api-v3-sdk";
 
-// ─── Debug: log env status on startup ────────────────────────────────────────
-console.log("📧 Email config check:", {
-  user: process.env.EMAIL_USER ? "SET ✅" : "MISSING ❌",
-  pass: process.env.EMAIL_PASS ? "SET ✅" : "MISSING ❌",
-  frontend: process.env.FRONTEND_URL || "http://localhost:3000",
-});
-
-const createTransporter = () =>
-  nodemailer.createTransport({
-    host: "smtp-relay.brevo.com",
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-    connectionTimeout: 15000,
-  });
-
-const canSendEmail = () => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn("⚠️  EMAIL_USER / EMAIL_PASS not set — skipping email");
-    return false;
+// ─── Brevo API helper — same pattern as userController.js ────────────────────
+const sendMail = async ({ to, subject, html }) => {
+  if (!process.env.BREVO_API_KEY || !process.env.EMAIL_USER) {
+    console.warn("⚠️  BREVO_API_KEY / EMAIL_USER not set — skipping email");
+    return;
   }
-  return true;
+
+  try {
+    const defaultClient = SibApiV3Sdk.ApiClient.instance;
+    const apiKey = defaultClient.authentications["api-key"];
+    apiKey.apiKey = process.env.BREVO_API_KEY;
+
+    const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+
+    sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: "NeoMart" };
+    sendSmtpEmail.to = [{ email: to }];
+    sendSmtpEmail.subject = subject;
+    sendSmtpEmail.htmlContent = html;
+
+    await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log(`📧 Email sent → ${to} | ${subject}`);
+  } catch (error) {
+    console.error(
+      "❌ Brevo email error:",
+      error?.response?.body || error.message,
+    );
+  }
 };
 
+// ─── Design tokens ────────────────────────────────────────────────────────────
 const GREEN = "#6FAF8E";
 const DARK = "#1A1A1A";
 const BG = "#F4F7F6";
 const BORDER = "#f0f0f0";
 
-const itemRowsHTML = (orderItems = []) =>
-  orderItems
-    .map(
-      (item) => `
-    <tr>
-      <td style="padding:10px 14px;border-bottom:1px solid ${BORDER};font-size:13px;color:#333;">
-        ${item.name}
-      </td>
-      <td style="padding:10px 14px;border-bottom:1px solid ${BORDER};font-size:13px;color:#888;text-align:center;">
-        ×${item.qty}
-      </td>
-      <td style="padding:10px 14px;border-bottom:1px solid ${BORDER};font-size:13px;font-weight:700;color:#333;text-align:right;">
-        ₹${item.price * item.qty}
-      </td>
-    </tr>`,
-    )
-    .join("");
-
+// ─── Shared HTML helpers ──────────────────────────────────────────────────────
 const emailShell = (bodyContent) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -64,8 +48,6 @@ const emailShell = (bodyContent) => `
   <table width="100%" cellpadding="0" cellspacing="0" style="background:${BG};padding:32px 16px;">
     <tr><td align="center">
       <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
-
-        <!-- Logo -->
         <tr>
           <td align="center" style="padding-bottom:20px;">
             <span style="font-size:26px;font-weight:900;letter-spacing:-1px;color:${DARK};">
@@ -73,10 +55,7 @@ const emailShell = (bodyContent) => `
             </span>
           </td>
         </tr>
-
         ${bodyContent}
-
-        <!-- Footer -->
         <tr>
           <td style="padding:20px 0;text-align:center;">
             <p style="margin:0;font-size:11px;color:#bbb;">
@@ -84,85 +63,96 @@ const emailShell = (bodyContent) => `
             </p>
           </td>
         </tr>
-
       </table>
     </td></tr>
   </table>
 </body>
 </html>`;
 
+const itemRowsHTML = (orderItems = []) =>
+  orderItems
+    .map(
+      (item) => `
+    <tr>
+      <td style="padding:10px 14px;border-bottom:1px solid ${BORDER};font-size:13px;color:#333;">${item.name}</td>
+      <td style="padding:10px 14px;border-bottom:1px solid ${BORDER};font-size:13px;color:#888;text-align:center;">×${item.qty}</td>
+      <td style="padding:10px 14px;border-bottom:1px solid ${BORDER};font-size:13px;font-weight:700;color:#333;text-align:right;">₹${item.price * item.qty}</td>
+    </tr>`,
+    )
+    .join("");
+
+const itemsAndTotalHTML = (order) => `
+  <p style="margin:0 0 10px;font-size:11px;font-weight:800;text-transform:uppercase;color:#999;letter-spacing:1px;">Items</p>
+  <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BORDER};border-radius:12px;overflow:hidden;margin-bottom:20px;">
+    <thead>
+      <tr style="background:#f9f9f9;">
+        <th style="padding:10px 14px;font-size:10px;font-weight:800;text-transform:uppercase;color:#999;text-align:left;">Item</th>
+        <th style="padding:10px 14px;font-size:10px;font-weight:800;text-transform:uppercase;color:#999;text-align:center;">Qty</th>
+        <th style="padding:10px 14px;font-size:10px;font-weight:800;text-transform:uppercase;color:#999;text-align:right;">Total</th>
+      </tr>
+    </thead>
+    <tbody>${itemRowsHTML(order.orderItems)}</tbody>
+  </table>
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:${DARK};border-radius:14px;padding:16px 20px;margin-bottom:28px;">
+    <tr>
+      <td style="font-size:13px;font-weight:700;color:${GREEN};text-transform:uppercase;letter-spacing:1px;">Total Amount</td>
+      <td style="font-size:20px;font-weight:900;color:${GREEN};text-align:right;">₹${order.totalPrice}</td>
+    </tr>
+  </table>`;
+
 const orderMetaHTML = (order, extraRows = "") => {
   const orderId = String(order._id).slice(-8).toUpperCase();
   return `
-  <table width="100%" cellpadding="0" cellspacing="0"
-    style="background:${BG};border-radius:14px;padding:16px 20px;margin-bottom:24px;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:${BG};border-radius:14px;padding:16px 20px;margin-bottom:24px;">
     <tr>
-      <td colspan="2" style="font-size:11px;font-weight:800;text-transform:uppercase;
-        color:#999;letter-spacing:1px;padding-bottom:12px;">Order Info</td>
+      <td colspan="2" style="font-size:11px;font-weight:800;text-transform:uppercase;color:#999;letter-spacing:1px;padding-bottom:12px;">Order Info</td>
     </tr>
     <tr>
       <td style="font-size:12px;color:#888;padding:4px 0;">Order ID</td>
-      <td style="font-size:12px;font-weight:800;color:${DARK};text-align:right;font-family:monospace;">
-        #${orderId}
-      </td>
+      <td style="font-size:12px;font-weight:800;color:${DARK};text-align:right;font-family:monospace;">#${orderId}</td>
     </tr>
     <tr>
       <td style="font-size:12px;color:#888;padding:4px 0;">Payment</td>
-      <td style="font-size:12px;font-weight:700;color:${GREEN};text-align:right;">
-        ${order.paymentMethod || "Paid"} ✓
-      </td>
+      <td style="font-size:12px;font-weight:700;color:${GREEN};text-align:right;">${order.paymentMethod || "Paid"} ✓</td>
     </tr>
     <tr>
       <td style="font-size:12px;color:#888;padding:4px 0;">Delivery To</td>
-      <td style="font-size:12px;font-weight:600;color:#333;text-align:right;">
-        ${order.shippingAddress?.address || ""}, ${order.shippingAddress?.city || ""}
-      </td>
+      <td style="font-size:12px;font-weight:600;color:#333;text-align:right;">${order.shippingAddress?.address || ""}, ${order.shippingAddress?.city || ""}</td>
     </tr>
     ${extraRows}
   </table>`;
 };
 
-const itemsAndTotalHTML = (order) => `
-  <p style="margin:0 0 10px;font-size:11px;font-weight:800;text-transform:uppercase;
-    color:#999;letter-spacing:1px;">Items</p>
-  <table width="100%" cellpadding="0" cellspacing="0"
-    style="border:1px solid ${BORDER};border-radius:12px;overflow:hidden;margin-bottom:20px;">
-    <thead>
-      <tr style="background:#f9f9f9;">
-        <th style="padding:10px 14px;font-size:10px;font-weight:800;text-transform:uppercase;
-          color:#999;text-align:left;">Item</th>
-        <th style="padding:10px 14px;font-size:10px;font-weight:800;text-transform:uppercase;
-          color:#999;text-align:center;">Qty</th>
-        <th style="padding:10px 14px;font-size:10px;font-weight:800;text-transform:uppercase;
-          color:#999;text-align:right;">Total</th>
-      </tr>
-    </thead>
-    <tbody>${itemRowsHTML(order.orderItems)}</tbody>
-  </table>
-  <table width="100%" cellpadding="0" cellspacing="0"
-    style="background:${DARK};border-radius:14px;padding:16px 20px;margin-bottom:28px;">
+const journeyHTML = (steps) => `
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:${BG};border-radius:14px;padding:16px 20px;margin-bottom:24px;">
     <tr>
-      <td style="font-size:13px;font-weight:700;color:${GREEN};
-        text-transform:uppercase;letter-spacing:1px;">Amount</td>
-      <td style="font-size:20px;font-weight:900;color:${GREEN};
-        text-align:right;font-style:italic;">₹${order.totalPrice}</td>
+      <td colspan="4" style="font-size:11px;font-weight:800;text-transform:uppercase;color:#999;letter-spacing:1px;padding-bottom:16px;">Your Delivery Journey</td>
+    </tr>
+    <tr>
+      ${steps
+        .map(
+          (s) => `
+        <td align="center" style="width:25%;vertical-align:top;">
+          <div style="width:28px;height:28px;border-radius:50%;margin:0 auto 6px;background:${s.done ? GREEN : "#e5e7eb"};font-size:13px;line-height:28px;text-align:center;">${s.icon}</div>
+          <p style="margin:0;font-size:9px;font-weight:800;color:${s.done ? "#374151" : "#d1d5db"};text-align:center;text-transform:uppercase;line-height:1.3;">${s.label}</p>
+        </td>`,
+        )
+        .join("")}
     </tr>
   </table>`;
 
 const ctaButton = (label, path) => `
   <div style="text-align:center;margin-bottom:24px;">
     <a href="${process.env.FRONTEND_URL || "http://localhost:3000"}${path}"
-      style="display:inline-block;background:${GREEN};color:#fff;text-decoration:none;
-        font-weight:900;font-size:13px;padding:13px 32px;border-radius:50px;">
+      style="display:inline-block;background:${GREEN};color:#fff;text-decoration:none;font-weight:900;font-size:13px;padding:13px 32px;border-radius:50px;">
       ${label}
     </a>
   </div>`;
 
-// ─── 1. Order Placed / Confirmed ──────────────────────────────────────────────
+// ─── 1. Order Placed ──────────────────────────────────────────────────────────
 export const sendOrderSuccessEmail = async ({ to, name, order }) => {
-  if (!canSendEmail()) return;
-
   const orderId = String(order._id).slice(-8).toUpperCase();
+  const isCOD = order.paymentMethod === "COD";
   const placedAt = new Date(order.createdAt || Date.now()).toLocaleString(
     "en-IN",
     {
@@ -174,217 +164,104 @@ export const sendOrderSuccessEmail = async ({ to, name, order }) => {
     },
   );
 
-  const isCOD = order.paymentMethod === "COD";
-
   const body = `
-    <!-- Banner -->
     <tr>
-      <td style="background:${GREEN};border-radius:20px 20px 0 0;
-        padding:32px 32px 24px;text-align:center;">
+      <td style="background:${GREEN};border-radius:20px 20px 0 0;padding:32px;text-align:center;">
         <div style="font-size:36px;margin-bottom:12px;">🛒</div>
-        <h1 style="margin:0;font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;">
-          Order Confirmed!
-        </h1>
-        <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.85);">
-          We've received your order and it's being prepared
-        </p>
+        <h1 style="margin:0;font-size:22px;font-weight:900;color:#fff;">Order Confirmed!</h1>
+        <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.85);">We've received your order and it's being prepared</p>
       </td>
     </tr>
-
-    <!-- Card body -->
     <tr>
       <td style="background:#fff;border-radius:0 0 20px 20px;padding:28px 32px 32px;">
-        <p style="margin:0 0 20px;font-size:15px;color:#333;">
-          Hi <strong>${name || "there"}</strong>, 👋
-        </p>
+        <p style="margin:0 0 20px;font-size:15px;color:#333;">Hi <strong>${name || "there"}</strong>, 👋</p>
         <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">
           ${
             isCOD
-              ? "Your order has been placed successfully! Please keep <strong>₹" +
-                order.totalPrice +
-                "</strong> ready to pay the delivery partner at the door."
+              ? `Your order has been placed! Please keep <strong>₹${order.totalPrice}</strong> ready to pay the delivery partner at the door.`
               : "Your payment was confirmed and your order is now being processed."
           }
         </p>
-
         ${orderMetaHTML(
           order,
           `
           <tr>
             <td style="font-size:12px;color:#888;padding:4px 0;">Placed On</td>
             <td style="font-size:12px;font-weight:700;color:${DARK};text-align:right;">${placedAt}</td>
-          </tr>
-        `,
+          </tr>`,
         )}
-
         ${itemsAndTotalHTML(order)}
-
         ${
           isCOD
             ? `
-        <div style="background:#FFF8E7;border:1px solid #FFE082;border-radius:14px;
-          padding:14px 18px;margin-bottom:24px;">
-          <p style="margin:0;font-size:13px;color:#856404;font-weight:700;">
-            💵 Cash on Delivery — pay <strong>₹${order.totalPrice}</strong> when your order arrives.
-          </p>
+        <div style="background:#FFF8E7;border:1px solid #FFE082;border-radius:14px;padding:14px 18px;margin-bottom:24px;">
+          <p style="margin:0;font-size:13px;color:#856404;font-weight:700;">💵 Cash on Delivery — pay <strong>₹${order.totalPrice}</strong> when your order arrives.</p>
         </div>`
             : ""
         }
-
-        <!-- Delivery journey -->
-        <table width="100%" cellpadding="0" cellspacing="0"
-          style="background:#F4F7F6;border-radius:14px;padding:16px 20px;margin-bottom:24px;">
-          <tr>
-            <td colspan="5" style="font-size:11px;font-weight:800;text-transform:uppercase;
-              color:#999;letter-spacing:1px;padding-bottom:16px;">Your Delivery Journey</td>
-          </tr>
-          <tr>
-            ${[
-              { icon: "🛒", label: "Order<br/>Placed", done: true },
-              { icon: "📦", label: "In<br/>Transit", done: false },
-              { icon: "🛵", label: "Out for<br/>Delivery", done: false },
-              { icon: "✅", label: "Delivered", done: false },
-            ]
-              .map(
-                (s, i, arr) => `
-              <td align="center" style="padding:0;width:${100 / arr.length}%;vertical-align:top;">
-                <div style="width:28px;height:28px;border-radius:50%;margin:0 auto 6px;
-                  background:${s.done ? "#6FAF8E" : "#e5e7eb"};
-                  display:flex;align-items:center;justify-content:center;
-                  font-size:13px;line-height:28px;text-align:center;">
-                  ${s.icon}
-                </div>
-                <p style="margin:0;font-size:9px;font-weight:800;color:${s.done ? "#374151" : "#d1d5db"};
-                  text-align:center;text-transform:uppercase;letter-spacing:0.3px;line-height:1.3;">
-                  ${s.label}
-                </p>
-              </td>
-            `,
-              )
-              .join("")}
-          </tr>
-        </table>
-
+        ${journeyHTML([
+          { icon: "🛒", label: "Order<br/>Placed", done: true },
+          { icon: "📦", label: "In<br/>Transit", done: false },
+          { icon: "🛵", label: "Out for<br/>Delivery", done: false },
+          { icon: "✅", label: "Delivered", done: false },
+        ])}
         ${ctaButton("Track My Order →", "/myorders")}
-
-        <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">
-          Thank you for shopping with NeoMart 💚<br/>
-          Questions? Just reply to this email.
-        </p>
+        <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">Thank you for shopping with NeoMart 💚<br/>Questions? Just reply to this email.</p>
       </td>
     </tr>`;
 
-  try {
-    await createTransporter().sendMail({
-      from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
-      to,
-      subject: `🛒 Order Confirmed! #${orderId} — NeoMart`,
-      html: emailShell(body),
-    });
-    console.log(`📧 Order confirmed email → ${to} [#${orderId}]`);
-  } catch (err) {
-    console.error(`❌ sendOrderSuccessEmail failed for ${to}:`, err.message);
-  }
+  await sendMail({
+    to,
+    subject: `🛒 Order Confirmed! #${orderId} — NeoMart`,
+    html: emailShell(body),
+  });
 };
 
-// ─── 2. Out for Delivery (with partner name) ──────────────────────────────────
+// ─── 2. Out for Delivery ──────────────────────────────────────────────────────
 export const sendOutForDeliveryEmail = async ({
   to,
   name,
   order,
   partnerName,
 }) => {
-  if (!canSendEmail()) return;
-
   const orderId = String(order._id).slice(-8).toUpperCase();
 
   const body = `
     <tr>
-      <td style="background:${GREEN};border-radius:20px 20px 0 0;
-        padding:32px;text-align:center;">
-        <div style="font-size:36px;">🛵</div>
-        <h1 style="margin:10px 0 0;font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;">
-          Out For Delivery!
-        </h1>
-        <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.85);">
-          Your order is on its way
-        </p>
+      <td style="background:${GREEN};border-radius:20px 20px 0 0;padding:32px;text-align:center;">
+        <div style="font-size:36px;margin-bottom:12px;">🛵</div>
+        <h1 style="margin:0;font-size:22px;font-weight:900;color:#fff;">Out For Delivery!</h1>
+        <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.85);">Your order is on its way</p>
       </td>
     </tr>
-
     <tr>
       <td style="background:#fff;border-radius:0 0 20px 20px;padding:28px 32px 32px;">
-        <p style="margin:0 0 20px;font-size:15px;color:#333;">
-          Hi <strong>${name || "there"}</strong>, 👋
-        </p>
+        <p style="margin:0 0 20px;font-size:15px;color:#333;">Hi <strong>${name || "there"}</strong>, 👋</p>
         <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">
-          Great news! Your delivery partner <strong>${partnerName || "our agent"}</strong>
-          is heading to your location right now. Please be available to receive your order.
+          Your delivery partner <strong>${partnerName || "our agent"}</strong> is heading to your location. Please be available to receive your order.
         </p>
-
-        <!-- Delivery journey -->
-        <table width="100%" cellpadding="0" cellspacing="0"
-          style="background:#F4F7F6;border-radius:14px;padding:16px 20px;margin-bottom:24px;">
-          <tr>
-            <td colspan="4" style="font-size:11px;font-weight:800;text-transform:uppercase;
-              color:#999;letter-spacing:1px;padding-bottom:16px;">Your Delivery Journey</td>
-          </tr>
-          <tr>
-            ${[
-              { icon: "🛒", label: "Order<br/>Placed", done: true },
-              { icon: "📦", label: "In<br/>Transit", done: true },
-              { icon: "🛵", label: "Out for<br/>Delivery", done: true },
-              { icon: "✅", label: "Delivered", done: false },
-            ]
-              .map(
-                (s, i, arr) => `
-              <td align="center" style="padding:0;width:${100 / arr.length}%;vertical-align:top;">
-                <div style="width:28px;height:28px;border-radius:50%;margin:0 auto 6px;
-                  background:${s.done ? "#6FAF8E" : "#e5e7eb"};
-                  font-size:13px;line-height:28px;text-align:center;">
-                  ${s.icon}
-                </div>
-                <p style="margin:0;font-size:9px;font-weight:800;color:${s.done ? "#374151" : "#d1d5db"};
-                  text-align:center;text-transform:uppercase;letter-spacing:0.3px;line-height:1.3;">
-                  ${s.label}
-                </p>
-              </td>
-            `,
-              )
-              .join("")}
-          </tr>
-        </table>
-
+        ${journeyHTML([
+          { icon: "🛒", label: "Order<br/>Placed", done: true },
+          { icon: "📦", label: "In<br/>Transit", done: true },
+          { icon: "🛵", label: "Out for<br/>Delivery", done: true },
+          { icon: "✅", label: "Delivered", done: false },
+        ])}
         ${orderMetaHTML(order)}
         ${itemsAndTotalHTML(order)}
-
         ${ctaButton("Track My Order →", "/myorders")}
-
-        <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">
-          Thank you for shopping with NeoMart 💚<br/>
-          Questions? Just reply to this email.
-        </p>
+        <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">Thank you for shopping with NeoMart 💚<br/>Questions? Just reply to this email.</p>
       </td>
-    </tr>
-  `;
+    </tr>`;
 
-  try {
-    await createTransporter().sendMail({
-      from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
-      to,
-      subject: `🛵 Out for Delivery — Order #${orderId} · NeoMart`,
-      html: emailShell(body),
-    });
-    console.log(`📧 Out-for-delivery email → ${to} [#${orderId}]`);
-  } catch (err) {
-    console.error(`❌ sendOutForDeliveryEmail failed for ${to}:`, err.message);
-  }
+  await sendMail({
+    to,
+    subject: `🛵 Out for Delivery — Order #${orderId} · NeoMart`,
+    html: emailShell(body),
+  });
 };
 
-// ─── 3. Delivered Confirmation ────────────────────────────────────────────────
+// ─── 3. Order Delivered ───────────────────────────────────────────────────────
 export const sendDeliveryEmail = async ({ to, name, order }) => {
-  if (!canSendEmail()) return;
-
   const orderId = String(order._id).slice(-8).toUpperCase();
   const deliveredAt = new Date(order.deliveredAt || Date.now()).toLocaleString(
     "en-IN",
@@ -398,149 +275,70 @@ export const sendDeliveryEmail = async ({ to, name, order }) => {
   );
 
   const body = `
-    <!-- Banner -->
     <tr>
-      <td style="background:${GREEN};border-radius:20px 20px 0 0;
-        padding:32px 32px 24px;text-align:center;">
+      <td style="background:${GREEN};border-radius:20px 20px 0 0;padding:32px;text-align:center;">
         <div style="font-size:36px;margin-bottom:12px;">✅</div>
-        <h1 style="margin:0;font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;">
-          Order Delivered!
-        </h1>
-        <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.85);">
-          Your package has arrived safely
-        </p>
+        <h1 style="margin:0;font-size:22px;font-weight:900;color:#fff;">Order Delivered!</h1>
+        <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.85);">Your package has arrived safely</p>
       </td>
     </tr>
-
-    <!-- Card body -->
     <tr>
       <td style="background:#fff;border-radius:0 0 20px 20px;padding:28px 32px 32px;">
-        <p style="margin:0 0 20px;font-size:15px;color:#333;">
-          Hi <strong>${name || "there"}</strong>, 👋
-        </p>
-        <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">
-          Your NeoMart order has been successfully delivered. We hope you love your purchase!
-        </p>
-
-        <!-- Delivery journey — all done -->
-        <table width="100%" cellpadding="0" cellspacing="0"
-          style="background:#F4F7F6;border-radius:14px;padding:16px 20px;margin-bottom:24px;">
-          <tr>
-            <td colspan="4" style="font-size:11px;font-weight:800;text-transform:uppercase;
-              color:#999;letter-spacing:1px;padding-bottom:16px;">Your Delivery Journey</td>
-          </tr>
-          <tr>
-            ${[
-              { icon: "🛒", label: "Order<br/>Placed", done: true },
-              { icon: "📦", label: "In<br/>Transit", done: true },
-              { icon: "🛵", label: "Out for<br/>Delivery", done: true },
-              { icon: "✅", label: "Delivered", done: true },
-            ]
-              .map(
-                (s, i, arr) => `
-              <td align="center" style="padding:0;width:${100 / arr.length}%;vertical-align:top;">
-                <div style="width:28px;height:28px;border-radius:50%;margin:0 auto 6px;
-                  background:${s.done ? "#6FAF8E" : "#e5e7eb"};
-                  font-size:13px;line-height:28px;text-align:center;">
-                  ${s.icon}
-                </div>
-                <p style="margin:0;font-size:9px;font-weight:800;color:${s.done ? "#374151" : "#d1d5db"};
-                  text-align:center;text-transform:uppercase;letter-spacing:0.3px;line-height:1.3;">
-                  ${s.label}
-                </p>
-              </td>
-            `,
-              )
-              .join("")}
-          </tr>
-        </table>
-
+        <p style="margin:0 0 20px;font-size:15px;color:#333;">Hi <strong>${name || "there"}</strong>, 👋</p>
+        <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">Your NeoMart order has been successfully delivered. We hope you love your purchase!</p>
+        ${journeyHTML([
+          { icon: "🛒", label: "Order<br/>Placed", done: true },
+          { icon: "📦", label: "In<br/>Transit", done: true },
+          { icon: "🛵", label: "Out for<br/>Delivery", done: true },
+          { icon: "✅", label: "Delivered", done: true },
+        ])}
         ${orderMetaHTML(
           order,
           `
           <tr>
             <td style="font-size:12px;color:#888;padding:4px 0;">Delivered On</td>
             <td style="font-size:12px;font-weight:700;color:${DARK};text-align:right;">${deliveredAt}</td>
-          </tr>
-        `,
+          </tr>`,
         )}
-
         ${itemsAndTotalHTML(order)}
-
         ${ctaButton("View My Orders →", "/myorders")}
-
-        <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">
-          Thank you for shopping with NeoMart 💚<br/>
-          If you have any issues, reply to this email.
-        </p>
+        <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">Thank you for shopping with NeoMart 💚<br/>If you have any issues, reply to this email.</p>
       </td>
     </tr>`;
 
-  try {
-    await createTransporter().sendMail({
-      from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
-      to,
-      subject: `✅ Delivered! Your NeoMart order #${orderId} has arrived`,
-      html: emailShell(body),
-    });
-    console.log(`📧 Delivery confirmed email → ${to} [#${orderId}]`);
-  } catch (err) {
-    console.error(`❌ sendDeliveryEmail failed for ${to}:`, err.message);
-  }
+  await sendMail({
+    to,
+    subject: `✅ Delivered! Your NeoMart order #${orderId} has arrived`,
+    html: emailShell(body),
+  });
 };
 
-// ─── 4. OTP Email (sent alongside Out for Delivery) ──────────────────────────
+// ─── 4. OTP Email ────────────────────────────────────────────────────────────
 export const sendOtpEmail = async ({ to, name, otp, order, partnerName }) => {
-  if (!canSendEmail()) return;
-
   const orderId = String(order._id).slice(-8).toUpperCase();
   const itemCount = order.orderItems?.length || 0;
 
   const body = `
-    <!-- Banner -->
     <tr>
-      <td style="background:${DARK};border-radius:20px 20px 0 0;
-        padding:32px 32px 28px;text-align:center;">
+      <td style="background:${DARK};border-radius:20px 20px 0 0;padding:32px;text-align:center;">
         <div style="font-size:34px;margin-bottom:10px;">🔐</div>
-        <h1 style="margin:0;font-size:21px;font-weight:900;color:#fff;letter-spacing:-0.5px;">
-          Your Delivery OTP
-        </h1>
-        <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.6);">
-          NeoMart Order #${orderId}
-        </p>
+        <h1 style="margin:0;font-size:21px;font-weight:900;color:#fff;">Your Delivery OTP</h1>
+        <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.6);">NeoMart Order #${orderId}</p>
       </td>
     </tr>
-
-    <!-- Card body -->
     <tr>
       <td style="background:#fff;border-radius:0 0 20px 20px;padding:28px 32px 32px;">
-        <p style="margin:0 0 6px;font-size:15px;color:#333;">
-          Hi <strong>${name || "there"}</strong>, 👋
-        </p>
+        <p style="margin:0 0 6px;font-size:15px;color:#333;">Hi <strong>${name || "there"}</strong>, 👋</p>
         <p style="margin:0 0 28px;font-size:14px;color:#666;line-height:1.6;">
-          Your delivery partner <strong>${partnerName || "our agent"}</strong> is heading
-          to your location right now with your ${itemCount} item${itemCount !== 1 ? "s" : ""}.
+          Your delivery partner <strong>${partnerName || "our agent"}</strong> is heading to your location with your ${itemCount} item${itemCount !== 1 ? "s" : ""}.
         </p>
-
-        <!-- Big OTP block -->
-        <div style="background:#F4F7F6;border:2px dashed ${GREEN};border-radius:20px;
-          padding:28px 24px;text-align:center;margin-bottom:28px;">
-          <p style="margin:0 0 6px;font-size:11px;font-weight:800;text-transform:uppercase;
-            letter-spacing:2px;color:#888;">Your Delivery OTP</p>
-          <p style="margin:0;font-size:52px;font-weight:900;letter-spacing:14px;
-            color:${DARK};font-family:monospace;">${otp}</p>
-          <p style="margin:10px 0 0;font-size:11px;color:#aaa;">
-            ⏱ Valid for <strong>15 minutes</strong>
-          </p>
+        <div style="background:#F4F7F6;border:2px dashed ${GREEN};border-radius:20px;padding:28px 24px;text-align:center;margin-bottom:28px;">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#888;">Your Delivery OTP</p>
+          <p style="margin:0;font-size:52px;font-weight:900;letter-spacing:14px;color:${DARK};font-family:monospace;">${otp}</p>
+          <p style="margin:10px 0 0;font-size:11px;color:#aaa;">⏱ Valid for <strong>15 minutes</strong></p>
         </div>
-
-        <!-- Instruction steps -->
-        <table width="100%" cellpadding="0" cellspacing="0"
-          style="background:#F4F7F6;border-radius:14px;padding:18px 20px;margin-bottom:24px;">
-          <tr>
-            <td colspan="2" style="font-size:11px;font-weight:800;text-transform:uppercase;
-              color:#999;letter-spacing:1px;padding-bottom:14px;">How it works</td>
-          </tr>
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4F7F6;border-radius:14px;padding:18px 20px;margin-bottom:24px;">
+          <tr><td colspan="2" style="font-size:11px;font-weight:800;text-transform:uppercase;color:#999;letter-spacing:1px;padding-bottom:14px;">How it works</td></tr>
           ${[
             ["🛒", "Order placed & confirmed"],
             ["📦", "In transit — your order is being prepared"],
@@ -548,64 +346,26 @@ export const sendOtpEmail = async ({ to, name, otp, order, partnerName }) => {
             ["🔐", "Share your OTP → collect package ✅"],
           ]
             .map(
-              ([num, text]) => `
+              ([icon, text]) => `
           <tr>
-            <td style="font-size:16px;padding:5px 10px 5px 0;vertical-align:top;">${num}</td>
+            <td style="font-size:16px;padding:5px 10px 5px 0;vertical-align:top;">${icon}</td>
             <td style="font-size:13px;color:#555;padding:6px 0;vertical-align:top;">${text}</td>
           </tr>`,
             )
             .join("")}
         </table>
-
-        <!-- Order info -->
-        <table width="100%" cellpadding="0" cellspacing="0"
-          style="border:1px solid #f0f0f0;border-radius:12px;padding:12px 16px;margin-bottom:24px;">
-          <tr>
-            <td style="font-size:12px;color:#888;padding:3px 0;">Order</td>
-            <td style="font-size:12px;font-weight:800;color:${DARK};text-align:right;font-family:monospace;">
-              #${orderId}
-            </td>
-          </tr>
-          <tr>
-            <td style="font-size:12px;color:#888;padding:3px 0;">Amount</td>
-            <td style="font-size:12px;font-weight:800;color:${GREEN};text-align:right;">
-              ₹${order.totalPrice}
-              ${order.paymentMethod === "COD" ? " <span style='color:#888;font-weight:600;'>(Pay on delivery)</span>" : " ✓ Paid"}
-            </td>
-          </tr>
-          <tr>
-            <td style="font-size:12px;color:#888;padding:3px 0;">Address</td>
-            <td style="font-size:12px;font-weight:600;color:#333;text-align:right;">
-              ${order.shippingAddress?.address || ""}, ${order.shippingAddress?.city || ""}
-            </td>
-          </tr>
-        </table>
-
-        <!-- Security note -->
-        <div style="background:#FFF8E7;border:1px solid #FFE082;border-radius:12px;
-          padding:12px 16px;margin-bottom:24px;">
+        <div style="background:#FFF8E7;border:1px solid #FFE082;border-radius:12px;padding:12px 16px;margin-bottom:24px;">
           <p style="margin:0;font-size:12px;color:#856404;line-height:1.5;">
-            🔒 <strong>Keep this OTP private.</strong> Share it only with the NeoMart delivery
-            partner at your door. Never share it over the phone or with anyone else.
+            🔒 <strong>Keep this OTP private.</strong> Share it only with the NeoMart delivery partner at your door. Never share it over the phone.
           </p>
         </div>
-
-        <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">
-          Thank you for shopping with NeoMart 💚<br/>
-          If you didn't place this order, reply to this email.
-        </p>
+        <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">Thank you for shopping with NeoMart 💚<br/>If you didn't place this order, reply to this email.</p>
       </td>
     </tr>`;
 
-  try {
-    await createTransporter().sendMail({
-      from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
-      to,
-      subject: `🔐 Your NeoMart delivery OTP: ${otp} (Order #${orderId})`,
-      html: emailShell(body),
-    });
-    console.log(`📧 OTP email → ${to} [#${orderId}] OTP: ${otp}`);
-  } catch (err) {
-    console.error(`❌ sendOtpEmail failed for ${to}:`, err.message);
-  }
+  await sendMail({
+    to,
+    subject: `🔐 Your NeoMart delivery OTP: ${otp} (Order #${orderId})`,
+    html: emailShell(body),
+  });
 };
