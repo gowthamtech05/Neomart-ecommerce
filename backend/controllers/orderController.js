@@ -7,8 +7,14 @@ import PDFDocument from "pdfkit";
 import DashboardStats from "../models/dashboardStatsModel.js";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
-import { sendOrderSuccessEmail } from "../utils/sendDeliveryEmail.js";
+import {
+  sendOrderSuccessEmail,
+  sendOutForDeliveryEmail,
+  sendDeliveryEmail,
+  sendOtpEmail,
+} from "../utils/sendDeliveryEmail.js";
 
+// ─── Loyalty & Streak ────────────────────────────────────────────────────────
 const updateLoyaltyStreak = async (userId, orderAmount) => {
   const user = await User.findById(userId);
   if (!user || orderAmount < 500) return;
@@ -21,7 +27,6 @@ const updateLoyaltyStreak = async (userId, orderAmount) => {
     user.loyaltyPoints = 5;
   } else {
     const diffInDays = (now - new Date(lastReward)) / (1000 * 60 * 60 * 24);
-
     if (diffInDays <= 14) {
       user.streaks += 1;
       user.loyaltyPoints += 5;
@@ -48,6 +53,7 @@ const updateLoyaltyStreak = async (userId, orderAmount) => {
   await user.save();
 };
 
+// ─── Create Order ─────────────────────────────────────────────────────────────
 export const createOrder = asyncHandler(async (req, res) => {
   const { orderItems, totalPrice, paymentMethod, isPaid, shippingAddress } =
     req.body;
@@ -69,9 +75,21 @@ export const createOrder = asyncHandler(async (req, res) => {
   });
 
   const createdOrder = await order.save();
-
   await createdOrder.populate("user", "name email");
 
+  // ✅ FIX: Mark firstOrderCompleted = true after first order is placed
+  try {
+    const user = await User.findById(req.user._id);
+    if (user && !user.firstOrderCompleted) {
+      user.firstOrderCompleted = true;
+      await user.save();
+      console.log(`✅ firstOrderCompleted set to true for ${user.email}`);
+    }
+  } catch (err) {
+    console.error("❌ firstOrderCompleted update failed:", err.message);
+  }
+
+  // ✅ Send order confirmation email
   try {
     if (createdOrder.user?.email) {
       await sendOrderSuccessEmail({
@@ -79,10 +97,10 @@ export const createOrder = asyncHandler(async (req, res) => {
         name: createdOrder.user.name,
         order: createdOrder,
       });
-      console.log("✅ Order placed email sent");
+      console.log("✅ Order placed email sent to", createdOrder.user.email);
     }
   } catch (err) {
-    console.error("❌ Order email failed:", err.message);
+    console.error("❌ Order confirmation email failed:", err.message);
   }
 
   if (isPaid) {
@@ -96,6 +114,7 @@ export const createOrder = asyncHandler(async (req, res) => {
   res.status(201).json(createdOrder);
 });
 
+// ─── Verify Razorpay Payment ──────────────────────────────────────────────────
 export const verifyPayment = asyncHandler(async (req, res) => {
   const {
     razorpay_order_id,
@@ -115,7 +134,7 @@ export const verifyPayment = asyncHandler(async (req, res) => {
     throw new Error("Invalid payment signature");
   }
 
-  const order = await Order.findById(orderId);
+  const order = await Order.findById(orderId).populate("user", "name email");
   if (!order) throw new Error("Order not found");
 
   order.isPaid = true;
@@ -134,15 +153,64 @@ export const verifyPayment = asyncHandler(async (req, res) => {
   stats.netRevenue += order.totalPrice;
   stats.paidOrders += 1;
   stats.totalOrders += 1;
-
   await stats.save();
-  await updateLoyaltyStreak(order.user, order.totalPrice);
+
+  await updateLoyaltyStreak(order.user._id || order.user, order.totalPrice);
 
   res.json(order);
 });
 
+// ─── Update Order Status (Admin) ──────────────────────────────────────────────
+// Call this when admin changes status to "Out for Delivery"
+export const updateOrderStatus = asyncHandler(async (req, res) => {
+  const { status, partnerName } = req.body;
+
+  const order = await Order.findById(req.params.id).populate(
+    "user",
+    "name email",
+  );
+  if (!order) {
+    res.status(404);
+    throw new Error("Order not found");
+  }
+
+  order.orderStatus = status;
+  await order.save();
+
+  // ✅ Send "Out for Delivery" email with OTP when status changes
+  if (status === "Out for Delivery") {
+    try {
+      if (order.user?.email) {
+        // Generate a 4-digit OTP for delivery confirmation
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        order.deliveryOtp = otp;
+        await order.save();
+
+        await sendOtpEmail({
+          to: order.user.email,
+          name: order.user.name,
+          order,
+          partnerName: partnerName || "our delivery partner",
+          otp,
+        });
+        console.log(
+          `✅ Out-for-delivery OTP email sent to ${order.user.email} | OTP: ${otp}`,
+        );
+      }
+    } catch (err) {
+      console.error("❌ Out-for-delivery email failed:", err.message);
+    }
+  }
+
+  res.json(order);
+});
+
+// ─── Mark as Delivered ────────────────────────────────────────────────────────
 export const markAsDelivered = asyncHandler(async (req, res) => {
-  const order = await Order.findById(req.params.id);
+  const order = await Order.findById(req.params.id).populate(
+    "user",
+    "name email",
+  );
 
   if (!order) throw new Error("Order not found");
 
@@ -157,23 +225,37 @@ export const markAsDelivered = asyncHandler(async (req, res) => {
   if (!order.isPaid) {
     order.isPaid = true;
     order.paidAt = Date.now();
+
     let stats = await DashboardStats.findOne();
     if (!stats) stats = await DashboardStats.create({});
-
     stats.netRevenue += order.totalPrice;
     stats.paidOrders += 1;
     stats.codOrders += 1;
-
     await stats.save();
   }
 
-  await updateLoyaltyStreak(order.user, order.totalPrice);
+  await updateLoyaltyStreak(order.user._id || order.user, order.totalPrice);
 
   await order.save();
+
+  // ✅ Send delivery confirmation email
+  try {
+    if (order.user?.email) {
+      await sendDeliveryEmail({
+        to: order.user.email,
+        name: order.user.name,
+        order,
+      });
+      console.log(`✅ Delivery confirmation email sent to ${order.user.email}`);
+    }
+  } catch (err) {
+    console.error("❌ Delivery confirmation email failed:", err.message);
+  }
 
   res.json(order);
 });
 
+// ─── Cancel Order (User) ──────────────────────────────────────────────────────
 export const cancelOrder = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
   if (!order || order.user.toString() !== req.user._id.toString())
@@ -203,6 +285,7 @@ export const cancelOrder = asyncHandler(async (req, res) => {
   res.json({ message: "Order cancelled successfully" });
 });
 
+// ─── Admin Cancel Order ───────────────────────────────────────────────────────
 export const adminCancelOrder = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
   if (!order) throw new Error("Order not found");
@@ -231,6 +314,7 @@ export const adminCancelOrder = asyncHandler(async (req, res) => {
   res.json({ message: "Order cancelled by admin successfully" });
 });
 
+// ─── Refund Order ─────────────────────────────────────────────────────────────
 export const updateOrderToRefunded = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
 
@@ -257,6 +341,7 @@ export const updateOrderToRefunded = asyncHandler(async (req, res) => {
   res.json(order);
 });
 
+// ─── Admin Dashboard ──────────────────────────────────────────────────────────
 export const getAdminDashboard = async (req, res) => {
   try {
     let stats = await DashboardStats.findOne();
@@ -285,6 +370,7 @@ export const getAdminDashboard = async (req, res) => {
   }
 };
 
+// ─── Get Orders ───────────────────────────────────────────────────────────────
 export const getMyOrders = asyncHandler(async (req, res) => {
   const orders = await Order.find({ user: req.user._id }).sort({
     createdAt: -1,
@@ -311,6 +397,7 @@ export const getAllOrders = asyncHandler(async (req, res) => {
 
   res.json(orders);
 });
+
 export const getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
@@ -335,6 +422,7 @@ export const getOrderById = async (req, res) => {
   }
 };
 
+// ─── Admin Utilities ──────────────────────────────────────────────────────────
 export const resetOrders = asyncHandler(async (req, res) => {
   await Order.updateMany({}, { $set: { isAdminArchived: true } });
   res
@@ -417,6 +505,7 @@ export const resetMonthlyStats = async (req, res) => {
   }
 };
 
+// ─── Generate Monthly Report PDF ──────────────────────────────────────────────
 export const generateMonthlyReportPDF = asyncHandler(async (req, res) => {
   try {
     const orders = await Order.find({});
