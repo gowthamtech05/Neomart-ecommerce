@@ -1,6 +1,6 @@
 import User from "../models/userModel.js";
 import jwt from "jsonwebtoken";
-import nodemailer from "nodemailer";
+import * as SibApiV3Sdk from "@getbrevo/brevo";
 import asyncHandler from "express-async-handler";
 
 let otpStore = {};
@@ -25,24 +25,20 @@ export const sendOTP = async (req, res) => {
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
   otpStore[email] = otp;
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-  });
-
   try {
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "OTP Verification",
-      text: `Your OTP is: ${otp}`,
+    const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+    apiInstance.authentications["apiKey"].apiKey = process.env.BREVO_API_KEY;
+
+    await apiInstance.sendTransacEmail({
+      sender: { email: process.env.EMAIL_USER, name: "NeoMart" },
+      to: [{ email }],
+      subject: "OTP Verification - NeoMart",
+      textContent: `Your OTP is: ${otp}. Valid for 5 minutes.`,
     });
+
     res.status(200).json({ message: "OTP sent successfully" });
   } catch (error) {
-    console.error(error);
+    console.error("Brevo error:", error);
     res.status(500).json({ message: "Failed to send OTP" });
   }
 };
