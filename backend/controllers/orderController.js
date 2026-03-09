@@ -75,29 +75,35 @@ export const createOrder = asyncHandler(async (req, res) => {
   });
 
   const createdOrder = await order.save();
-  await createdOrder.populate("user", "name email");
 
-  // ✅ FIX: Mark firstOrderCompleted = true after first order is placed
+  // ✅ FIX: Always fetch user directly to guarantee name + email are available
+  const orderUser = await User.findById(req.user._id).select(
+    "name email firstOrderCompleted",
+  );
+
+  // ✅ Mark firstOrderCompleted on first order
   try {
-    const user = await User.findById(req.user._id);
-    if (user && !user.firstOrderCompleted) {
-      user.firstOrderCompleted = true;
-      await user.save();
-      console.log(`✅ firstOrderCompleted set to true for ${user.email}`);
+    if (orderUser && !orderUser.firstOrderCompleted) {
+      orderUser.firstOrderCompleted = true;
+      await orderUser.save();
+      console.log(`✅ firstOrderCompleted set to true for ${orderUser.email}`);
     }
   } catch (err) {
     console.error("❌ firstOrderCompleted update failed:", err.message);
   }
 
-  // ✅ Send order confirmation email
+  // ✅ Send order confirmation email (email 1 of 3)
   try {
-    if (createdOrder.user?.email) {
+    if (orderUser?.email) {
       await sendOrderSuccessEmail({
-        to: createdOrder.user.email,
-        name: createdOrder.user.name,
+        to: orderUser.email,
+        name: orderUser.name,
         order: createdOrder,
       });
-      console.log("✅ Order placed email sent to", createdOrder.user.email);
+    } else {
+      console.warn(
+        "⚠️  No user email found — skipping order confirmation email",
+      );
     }
   } catch (err) {
     console.error("❌ Order confirmation email failed:", err.message);
@@ -111,6 +117,8 @@ export const createOrder = asyncHandler(async (req, res) => {
     }
   }
 
+  // Populate user for response
+  await createdOrder.populate("user", "name email");
   res.status(201).json(createdOrder);
 });
 
@@ -161,7 +169,7 @@ export const verifyPayment = asyncHandler(async (req, res) => {
 });
 
 // ─── Update Order Status (Admin) ──────────────────────────────────────────────
-// Call this when admin changes status to "Out for Delivery"
+// Triggers "Out for Delivery" emails (OTP + partner notification)
 export const updateOrderStatus = asyncHandler(async (req, res) => {
   const { status, partnerName } = req.body;
 
@@ -177,7 +185,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   order.orderStatus = status;
   await order.save();
 
-  // ✅ Send "Out for Delivery" email with OTP when status changes
+  // ✅ Send both emails when status → "Out for Delivery" (email 2 of 3)
   if (status === "Out for Delivery") {
     try {
       if (order.user?.email) {
@@ -186,6 +194,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
         order.deliveryOtp = otp;
         await order.save();
 
+        // Send OTP email
         await sendOtpEmail({
           to: order.user.email,
           name: order.user.name,
@@ -193,8 +202,19 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
           partnerName: partnerName || "our delivery partner",
           otp,
         });
-        console.log(
-          `✅ Out-for-delivery OTP email sent to ${order.user.email} | OTP: ${otp}`,
+        console.log(`✅ OTP email sent to ${order.user.email} | OTP: ${otp}`);
+
+        // Send "Out for Delivery" notification email
+        await sendOutForDeliveryEmail({
+          to: order.user.email,
+          name: order.user.name,
+          order,
+          partnerName: partnerName || "our delivery partner",
+        });
+        console.log(`✅ Out-for-delivery email sent to ${order.user.email}`);
+      } else {
+        console.warn(
+          "⚠️  No user email on order — skipping out-for-delivery emails",
         );
       }
     } catch (err) {
@@ -238,7 +258,7 @@ export const markAsDelivered = asyncHandler(async (req, res) => {
 
   await order.save();
 
-  // ✅ Send delivery confirmation email
+  // ✅ Send delivery confirmation email (email 3 of 3)
   try {
     if (order.user?.email) {
       await sendDeliveryEmail({
@@ -247,6 +267,10 @@ export const markAsDelivered = asyncHandler(async (req, res) => {
         order,
       });
       console.log(`✅ Delivery confirmation email sent to ${order.user.email}`);
+    } else {
+      console.warn(
+        "⚠️  No user email on order — skipping delivery confirmation email",
+      );
     }
   } catch (err) {
     console.error("❌ Delivery confirmation email failed:", err.message);

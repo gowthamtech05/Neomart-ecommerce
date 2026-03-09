@@ -1,5 +1,12 @@
 import nodemailer from "nodemailer";
 
+// ─── Debug: log env status on startup ────────────────────────────────────────
+console.log("📧 Email config check:", {
+  user: process.env.EMAIL_USER ? "SET ✅" : "MISSING ❌",
+  pass: process.env.EMAIL_PASS ? "SET ✅" : "MISSING ❌",
+  frontend: process.env.FRONTEND_URL || "http://localhost:3000",
+});
+
 const createTransporter = () =>
   nodemailer.createTransport({
     host: "smtp-relay.brevo.com",
@@ -150,6 +157,8 @@ const ctaButton = (label, path) => `
       ${label}
     </a>
   </div>`;
+
+// ─── 1. Order Placed / Confirmed ──────────────────────────────────────────────
 export const sendOrderSuccessEmail = async ({ to, name, order }) => {
   if (!canSendEmail()) return;
 
@@ -174,7 +183,7 @@ export const sendOrderSuccessEmail = async ({ to, name, order }) => {
         padding:32px 32px 24px;text-align:center;">
         <div style="font-size:36px;margin-bottom:12px;">🛒</div>
         <h1 style="margin:0;font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;">
-          Order Placed!
+          Order Confirmed!
         </h1>
         <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.85);">
           We've received your order and it's being prepared
@@ -265,16 +274,20 @@ export const sendOrderSuccessEmail = async ({ to, name, order }) => {
       </td>
     </tr>`;
 
-  await createTransporter().sendMail({
-    from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: `🛒 Order Confirmed! #${orderId} — NeoMart`,
-    html: emailShell(body),
-  });
-
-  console.log(`📧 Order success email → ${to} [#${orderId}]`);
+  try {
+    await createTransporter().sendMail({
+      from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: `🛒 Order Confirmed! #${orderId} — NeoMart`,
+      html: emailShell(body),
+    });
+    console.log(`📧 Order confirmed email → ${to} [#${orderId}]`);
+  } catch (err) {
+    console.error(`❌ sendOrderSuccessEmail failed for ${to}:`, err.message);
+  }
 };
 
+// ─── 2. Out for Delivery (with partner name) ──────────────────────────────────
 export const sendOutForDeliveryEmail = async ({
   to,
   name,
@@ -290,37 +303,85 @@ export const sendOutForDeliveryEmail = async ({
       <td style="background:${GREEN};border-radius:20px 20px 0 0;
         padding:32px;text-align:center;">
         <div style="font-size:36px;">🛵</div>
-        <h1 style="margin:10px 0 0;color:#fff;">
+        <h1 style="margin:10px 0 0;font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;">
           Out For Delivery!
         </h1>
+        <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.85);">
+          Your order is on its way
+        </p>
       </td>
     </tr>
 
     <tr>
-      <td style="background:#fff;padding:28px;">
-        <p>
-          Hi <strong>${name}</strong>,<br/><br/>
-          Your delivery partner <strong>${partnerName}</strong>
-          is bringing your order.
+      <td style="background:#fff;border-radius:0 0 20px 20px;padding:28px 32px 32px;">
+        <p style="margin:0 0 20px;font-size:15px;color:#333;">
+          Hi <strong>${name || "there"}</strong>, 👋
         </p>
+        <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">
+          Great news! Your delivery partner <strong>${partnerName || "our agent"}</strong>
+          is heading to your location right now. Please be available to receive your order.
+        </p>
+
+        <!-- Delivery journey -->
+        <table width="100%" cellpadding="0" cellspacing="0"
+          style="background:#F4F7F6;border-radius:14px;padding:16px 20px;margin-bottom:24px;">
+          <tr>
+            <td colspan="4" style="font-size:11px;font-weight:800;text-transform:uppercase;
+              color:#999;letter-spacing:1px;padding-bottom:16px;">Your Delivery Journey</td>
+          </tr>
+          <tr>
+            ${[
+              { icon: "🛒", label: "Order<br/>Placed", done: true },
+              { icon: "📦", label: "In<br/>Transit", done: true },
+              { icon: "🛵", label: "Out for<br/>Delivery", done: true },
+              { icon: "✅", label: "Delivered", done: false },
+            ]
+              .map(
+                (s, i, arr) => `
+              <td align="center" style="padding:0;width:${100 / arr.length}%;vertical-align:top;">
+                <div style="width:28px;height:28px;border-radius:50%;margin:0 auto 6px;
+                  background:${s.done ? "#6FAF8E" : "#e5e7eb"};
+                  font-size:13px;line-height:28px;text-align:center;">
+                  ${s.icon}
+                </div>
+                <p style="margin:0;font-size:9px;font-weight:800;color:${s.done ? "#374151" : "#d1d5db"};
+                  text-align:center;text-transform:uppercase;letter-spacing:0.3px;line-height:1.3;">
+                  ${s.label}
+                </p>
+              </td>
+            `,
+              )
+              .join("")}
+          </tr>
+        </table>
 
         ${orderMetaHTML(order)}
         ${itemsAndTotalHTML(order)}
 
         ${ctaButton("Track My Order →", "/myorders")}
+
+        <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">
+          Thank you for shopping with NeoMart 💚<br/>
+          Questions? Just reply to this email.
+        </p>
       </td>
     </tr>
   `;
 
-  await createTransporter().sendMail({
-    from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: `🛵 Out for Delivery — Order #${orderId}`,
-    html: emailShell(body),
-  });
+  try {
+    await createTransporter().sendMail({
+      from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: `🛵 Out for Delivery — Order #${orderId} · NeoMart`,
+      html: emailShell(body),
+    });
+    console.log(`📧 Out-for-delivery email → ${to} [#${orderId}]`);
+  } catch (err) {
+    console.error(`❌ sendOutForDeliveryEmail failed for ${to}:`, err.message);
+  }
 };
 
-// confirmation
+// ─── 3. Delivered Confirmation ────────────────────────────────────────────────
 export const sendDeliveryEmail = async ({ to, name, order }) => {
   if (!canSendEmail()) return;
 
@@ -361,6 +422,39 @@ export const sendDeliveryEmail = async ({ to, name, order }) => {
           Your NeoMart order has been successfully delivered. We hope you love your purchase!
         </p>
 
+        <!-- Delivery journey — all done -->
+        <table width="100%" cellpadding="0" cellspacing="0"
+          style="background:#F4F7F6;border-radius:14px;padding:16px 20px;margin-bottom:24px;">
+          <tr>
+            <td colspan="4" style="font-size:11px;font-weight:800;text-transform:uppercase;
+              color:#999;letter-spacing:1px;padding-bottom:16px;">Your Delivery Journey</td>
+          </tr>
+          <tr>
+            ${[
+              { icon: "🛒", label: "Order<br/>Placed", done: true },
+              { icon: "📦", label: "In<br/>Transit", done: true },
+              { icon: "🛵", label: "Out for<br/>Delivery", done: true },
+              { icon: "✅", label: "Delivered", done: true },
+            ]
+              .map(
+                (s, i, arr) => `
+              <td align="center" style="padding:0;width:${100 / arr.length}%;vertical-align:top;">
+                <div style="width:28px;height:28px;border-radius:50%;margin:0 auto 6px;
+                  background:${s.done ? "#6FAF8E" : "#e5e7eb"};
+                  font-size:13px;line-height:28px;text-align:center;">
+                  ${s.icon}
+                </div>
+                <p style="margin:0;font-size:9px;font-weight:800;color:${s.done ? "#374151" : "#d1d5db"};
+                  text-align:center;text-transform:uppercase;letter-spacing:0.3px;line-height:1.3;">
+                  ${s.label}
+                </p>
+              </td>
+            `,
+              )
+              .join("")}
+          </tr>
+        </table>
+
         ${orderMetaHTML(
           order,
           `
@@ -382,16 +476,20 @@ export const sendDeliveryEmail = async ({ to, name, order }) => {
       </td>
     </tr>`;
 
-  await createTransporter().sendMail({
-    from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: `✅ Delivered! Your NeoMart order #${orderId} has arrived`,
-    html: emailShell(body),
-  });
-
-  console.log(`📧 Delivery email → ${to} [#${orderId}]`);
+  try {
+    await createTransporter().sendMail({
+      from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: `✅ Delivered! Your NeoMart order #${orderId} has arrived`,
+      html: emailShell(body),
+    });
+    console.log(`📧 Delivery confirmed email → ${to} [#${orderId}]`);
+  } catch (err) {
+    console.error(`❌ sendDeliveryEmail failed for ${to}:`, err.message);
+  }
 };
 
+// ─── 4. OTP Email (sent alongside Out for Delivery) ──────────────────────────
 export const sendOtpEmail = async ({ to, name, otp, order, partnerName }) => {
   if (!canSendEmail()) return;
 
@@ -403,9 +501,9 @@ export const sendOtpEmail = async ({ to, name, otp, order, partnerName }) => {
     <tr>
       <td style="background:${DARK};border-radius:20px 20px 0 0;
         padding:32px 32px 28px;text-align:center;">
-        <div style="font-size:34px;margin-bottom:10px;">🛵</div>
+        <div style="font-size:34px;margin-bottom:10px;">🔐</div>
         <h1 style="margin:0;font-size:21px;font-weight:900;color:#fff;letter-spacing:-0.5px;">
-          Your Delivery is On the Way!
+          Your Delivery OTP
         </h1>
         <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.6);">
           NeoMart Order #${orderId}
@@ -499,12 +597,15 @@ export const sendOtpEmail = async ({ to, name, otp, order, partnerName }) => {
       </td>
     </tr>`;
 
-  await createTransporter().sendMail({
-    from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: `🔐 Your NeoMart delivery OTP: ${otp} (Order #${orderId})`,
-    html: emailShell(body),
-  });
-
-  console.log(`📧 OTP email → ${to} [#${orderId}] OTP: ${otp}`);
+  try {
+    await createTransporter().sendMail({
+      from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
+      to,
+      subject: `🔐 Your NeoMart delivery OTP: ${otp} (Order #${orderId})`,
+      html: emailShell(body),
+    });
+    console.log(`📧 OTP email → ${to} [#${orderId}] OTP: ${otp}`);
+  } catch (err) {
+    console.error(`❌ sendOtpEmail failed for ${to}:`, err.message);
+  }
 };
