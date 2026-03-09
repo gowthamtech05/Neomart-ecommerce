@@ -1,25 +1,15 @@
-import nodemailer from "nodemailer";
+import SibApiV3Sdk from "sib-api-v3-sdk";
 
-const createTransporter = () =>
-  nodemailer.createTransport({
-    host: "smtp-relay.brevo.com",
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-    connectionTimeout: 15000,
-    // ✅ Force IPv4 — prevents resolving to IPv6 addresses
-    family: 4,
-  });
+const getBrevoInstance = () => {
+  const defaultClient = SibApiV3Sdk.ApiClient.instance;
+  const apiKey = defaultClient.authentications["api-key"];
+  apiKey.apiKey = process.env.BREVO_API_KEY;
+  return new SibApiV3Sdk.TransactionalEmailsApi();
+};
 
 const canSendEmail = () => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    console.warn("⚠️  EMAIL_USER / EMAIL_PASS not set — skipping email");
+  if (!process.env.BREVO_API_KEY) {
+    console.warn("⚠️  BREVO_API_KEY not set — skipping email");
     return false;
   }
   return true;
@@ -152,6 +142,180 @@ const ctaButton = (label, path) => `
       ${label}
     </a>
   </div>`;
+
+// ─── REGISTER / LOGIN OTP EMAIL ───────────────────────────────────────────────
+export const sendRegisterOtpEmail = async ({ to, otp }) => {
+  if (!canSendEmail()) return;
+
+  const body = `
+    <!-- Banner -->
+    <tr>
+      <td style="background:${DARK};border-radius:20px 20px 0 0;
+        padding:36px 32px 28px;text-align:center;">
+        <div style="font-size:38px;margin-bottom:10px;">🔐</div>
+        <h1 style="margin:0;font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;">
+          Verify Your Email
+        </h1>
+        <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.55);">
+          NeoMart Account Registration
+        </p>
+      </td>
+    </tr>
+
+    <!-- Card body -->
+    <tr>
+      <td style="background:#fff;border-radius:0 0 20px 20px;padding:32px 32px 36px;">
+        <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.7;text-align:center;">
+          Use the code below to complete your registration.<br/>
+          This code expires in <strong>5 minutes</strong>.
+        </p>
+
+        <!-- OTP Box -->
+        <div style="background:${BG};border:2px dashed ${GREEN};border-radius:18px;
+          padding:30px 24px;text-align:center;margin-bottom:28px;">
+          <p style="margin:0 0 8px;font-size:11px;font-weight:800;text-transform:uppercase;
+            letter-spacing:2.5px;color:#999;">Your OTP Code</p>
+          <p style="margin:0;font-size:54px;font-weight:900;letter-spacing:16px;
+            color:${DARK};font-family:monospace;">${otp}</p>
+          <p style="margin:12px 0 0;font-size:11px;color:#bbb;">
+            ⏱ Expires in <strong style="color:#555;">5 minutes</strong>
+          </p>
+        </div>
+
+        <!-- Steps -->
+        <table width="100%" cellpadding="0" cellspacing="0"
+          style="background:${BG};border-radius:14px;padding:18px 20px;margin-bottom:24px;">
+          <tr>
+            <td colspan="2" style="font-size:11px;font-weight:800;text-transform:uppercase;
+              color:#999;letter-spacing:1px;padding-bottom:14px;">How to use</td>
+          </tr>
+          ${[
+            ["1️⃣", "Go back to the NeoMart registration page"],
+            ["2️⃣", "Enter the 6-digit OTP shown above"],
+            ["3️⃣", "Complete your profile & start shopping 🛒"],
+          ]
+            .map(
+              ([num, text]) => `
+          <tr>
+            <td style="font-size:18px;padding:5px 12px 5px 0;vertical-align:top;">${num}</td>
+            <td style="font-size:13px;color:#555;padding:6px 0;vertical-align:top;line-height:1.5;">${text}</td>
+          </tr>`,
+            )
+            .join("")}
+        </table>
+
+        <!-- Security warning -->
+        <div style="background:#FFF8E7;border:1px solid #FFE082;border-radius:12px;
+          padding:13px 16px;margin-bottom:24px;">
+          <p style="margin:0;font-size:12px;color:#856404;line-height:1.6;">
+            🔒 <strong>Never share this OTP</strong> with anyone. NeoMart will never ask for your OTP over call or chat.
+          </p>
+        </div>
+
+        <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">
+          Didn't request this? You can safely ignore this email.<br/>
+          Need help? Reply to this email.
+        </p>
+      </td>
+    </tr>`;
+
+  const apiInstance = getBrevoInstance();
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+  sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: "NeoMart" };
+  sendSmtpEmail.to = [{ email: to }];
+  sendSmtpEmail.subject = `${otp} is your NeoMart verification code`;
+  sendSmtpEmail.htmlContent = emailShell(body);
+  await apiInstance.sendTransacEmail(sendSmtpEmail);
+  console.log(`📧 Register OTP email → ${to}`);
+};
+
+// ─── FORGOT PASSWORD OTP EMAIL ────────────────────────────────────────────────
+export const sendForgotPasswordOtpEmail = async ({ to, otp }) => {
+  if (!canSendEmail()) return;
+
+  const body = `
+    <!-- Banner -->
+    <tr>
+      <td style="background:linear-gradient(135deg,#1A1A1A 0%,#2d2d2d 100%);border-radius:20px 20px 0 0;
+        padding:36px 32px 28px;text-align:center;">
+        <div style="font-size:38px;margin-bottom:10px;">🔑</div>
+        <h1 style="margin:0;font-size:22px;font-weight:900;color:#fff;letter-spacing:-0.5px;">
+          Reset Your Password
+        </h1>
+        <p style="margin:8px 0 0;font-size:13px;color:rgba(255,255,255,0.55);">
+          NeoMart Account Recovery
+        </p>
+      </td>
+    </tr>
+
+    <!-- Card body -->
+    <tr>
+      <td style="background:#fff;border-radius:0 0 20px 20px;padding:32px 32px 36px;">
+        <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.7;text-align:center;">
+          We received a request to reset your NeoMart password.<br/>
+          Use the code below — it expires in <strong>5 minutes</strong>.
+        </p>
+
+        <!-- OTP Box -->
+        <div style="background:${BG};border:2px dashed #e05c5c;border-radius:18px;
+          padding:30px 24px;text-align:center;margin-bottom:28px;">
+          <p style="margin:0 0 8px;font-size:11px;font-weight:800;text-transform:uppercase;
+            letter-spacing:2.5px;color:#999;">Password Reset OTP</p>
+          <p style="margin:0;font-size:54px;font-weight:900;letter-spacing:16px;
+            color:${DARK};font-family:monospace;">${otp}</p>
+          <p style="margin:12px 0 0;font-size:11px;color:#bbb;">
+            ⏱ Expires in <strong style="color:#555;">5 minutes</strong>
+          </p>
+        </div>
+
+        <!-- Steps -->
+        <table width="100%" cellpadding="0" cellspacing="0"
+          style="background:${BG};border-radius:14px;padding:18px 20px;margin-bottom:24px;">
+          <tr>
+            <td colspan="2" style="font-size:11px;font-weight:800;text-transform:uppercase;
+              color:#999;letter-spacing:1px;padding-bottom:14px;">Next steps</td>
+          </tr>
+          ${[
+            ["1️⃣", "Go back to the NeoMart forgot password page"],
+            ["2️⃣", "Enter the 6-digit OTP shown above"],
+            ["3️⃣", "Set your new password & log back in 🔓"],
+          ]
+            .map(
+              ([num, text]) => `
+          <tr>
+            <td style="font-size:18px;padding:5px 12px 5px 0;vertical-align:top;">${num}</td>
+            <td style="font-size:13px;color:#555;padding:6px 0;vertical-align:top;line-height:1.5;">${text}</td>
+          </tr>`,
+            )
+            .join("")}
+        </table>
+
+        <!-- Security warning -->
+        <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;
+          padding:13px 16px;margin-bottom:24px;">
+          <p style="margin:0;font-size:12px;color:#991B1B;line-height:1.6;">
+            ⚠️ <strong>Didn't request this?</strong> Someone may be trying to access your account. 
+            Ignore this email and your password will remain unchanged.
+          </p>
+        </div>
+
+        <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">
+          Need help? Reply to this email and we'll assist you.
+        </p>
+      </td>
+    </tr>`;
+
+  const apiInstance = getBrevoInstance();
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+  sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: "NeoMart" };
+  sendSmtpEmail.to = [{ email: to }];
+  sendSmtpEmail.subject = `${otp} — NeoMart Password Reset Code`;
+  sendSmtpEmail.htmlContent = emailShell(body);
+  await apiInstance.sendTransacEmail(sendSmtpEmail);
+  console.log(`📧 Forgot password OTP email → ${to}`);
+};
+
+// ─── ORDER SUCCESS EMAIL ──────────────────────────────────────────────────────
 export const sendOrderSuccessEmail = async ({ to, name, order }) => {
   if (!canSendEmail()) return;
 
@@ -243,7 +407,6 @@ export const sendOrderSuccessEmail = async ({ to, name, order }) => {
               <td align="center" style="padding:0;width:${100 / arr.length}%;vertical-align:top;">
                 <div style="width:28px;height:28px;border-radius:50%;margin:0 auto 6px;
                   background:${s.done ? "#6FAF8E" : "#e5e7eb"};
-                  display:flex;align-items:center;justify-content:center;
                   font-size:13px;line-height:28px;text-align:center;">
                   ${s.icon}
                 </div>
@@ -267,16 +430,17 @@ export const sendOrderSuccessEmail = async ({ to, name, order }) => {
       </td>
     </tr>`;
 
-  await createTransporter().sendMail({
-    from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: `🛒 Order Confirmed! #${orderId} — NeoMart`,
-    html: emailShell(body),
-  });
-
+  const apiInstance = getBrevoInstance();
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+  sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: "NeoMart" };
+  sendSmtpEmail.to = [{ email: to }];
+  sendSmtpEmail.subject = `🛒 Order Confirmed! #${orderId} — NeoMart`;
+  sendSmtpEmail.htmlContent = emailShell(body);
+  await apiInstance.sendTransacEmail(sendSmtpEmail);
   console.log(`📧 Order success email → ${to} [#${orderId}]`);
 };
 
+// ─── OUT FOR DELIVERY EMAIL ───────────────────────────────────────────────────
 export const sendOutForDeliveryEmail = async ({
   to,
   name,
@@ -299,30 +463,39 @@ export const sendOutForDeliveryEmail = async ({
     </tr>
 
     <tr>
-      <td style="background:#fff;padding:28px;">
-        <p>
-          Hi <strong>${name}</strong>,<br/><br/>
-          Your delivery partner <strong>${partnerName}</strong>
-          is bringing your order.
+      <td style="background:#fff;padding:28px;border-radius:0 0 20px 20px;">
+        <p style="margin:0 0 20px;font-size:15px;color:#333;">
+          Hi <strong>${name}</strong>, 👋
+        </p>
+        <p style="margin:0 0 24px;font-size:14px;color:#555;line-height:1.6;">
+          Great news! Your delivery partner <strong>${partnerName}</strong>
+          is on the way with your order. Stay nearby!
         </p>
 
         ${orderMetaHTML(order)}
         ${itemsAndTotalHTML(order)}
 
         ${ctaButton("Track My Order →", "/myorders")}
+
+        <p style="margin:0;font-size:12px;color:#aaa;text-align:center;line-height:1.6;">
+          Thank you for shopping with NeoMart 💚<br/>
+          Questions? Just reply to this email.
+        </p>
       </td>
     </tr>
   `;
 
-  await createTransporter().sendMail({
-    from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: `🛵 Out for Delivery — Order #${orderId}`,
-    html: emailShell(body),
-  });
+  const apiInstance = getBrevoInstance();
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+  sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: "NeoMart" };
+  sendSmtpEmail.to = [{ email: to }];
+  sendSmtpEmail.subject = `🛵 Out for Delivery — Order #${orderId}`;
+  sendSmtpEmail.htmlContent = emailShell(body);
+  await apiInstance.sendTransacEmail(sendSmtpEmail);
+  console.log(`📧 Out for delivery email → ${to} [#${orderId}]`);
 };
 
-// confirmation
+// ─── ORDER DELIVERED EMAIL ────────────────────────────────────────────────────
 export const sendDeliveryEmail = async ({ to, name, order }) => {
   if (!canSendEmail()) return;
 
@@ -384,16 +557,17 @@ export const sendDeliveryEmail = async ({ to, name, order }) => {
       </td>
     </tr>`;
 
-  await createTransporter().sendMail({
-    from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: `✅ Delivered! Your NeoMart order #${orderId} has arrived`,
-    html: emailShell(body),
-  });
-
+  const apiInstance = getBrevoInstance();
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+  sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: "NeoMart" };
+  sendSmtpEmail.to = [{ email: to }];
+  sendSmtpEmail.subject = `✅ Delivered! Your NeoMart order #${orderId} has arrived`;
+  sendSmtpEmail.htmlContent = emailShell(body);
+  await apiInstance.sendTransacEmail(sendSmtpEmail);
   console.log(`📧 Delivery email → ${to} [#${orderId}]`);
 };
 
+// ─── DELIVERY OTP EMAIL ───────────────────────────────────────────────────────
 export const sendOtpEmail = async ({ to, name, otp, order, partnerName }) => {
   if (!canSendEmail()) return;
 
@@ -501,12 +675,12 @@ export const sendOtpEmail = async ({ to, name, otp, order, partnerName }) => {
       </td>
     </tr>`;
 
-  await createTransporter().sendMail({
-    from: `"NeoMart 🛒" <${process.env.EMAIL_USER}>`,
-    to,
-    subject: `🔐 Your NeoMart delivery OTP: ${otp} (Order #${orderId})`,
-    html: emailShell(body),
-  });
-
+  const apiInstance = getBrevoInstance();
+  const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
+  sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: "NeoMart" };
+  sendSmtpEmail.to = [{ email: to }];
+  sendSmtpEmail.subject = `🔐 Your NeoMart delivery OTP: ${otp} (Order #${orderId})`;
+  sendSmtpEmail.htmlContent = emailShell(body);
+  await apiInstance.sendTransacEmail(sendSmtpEmail);
   console.log(`📧 OTP email → ${to} [#${orderId}] OTP: ${otp}`);
 };
