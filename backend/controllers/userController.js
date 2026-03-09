@@ -26,8 +26,11 @@ export const sendOTP = async (req, res) => {
   otpStore[email] = otp;
 
   try {
+    const defaultClient = SibApiV3Sdk.ApiClient.instance;
+    const apiKey = defaultClient.authentications["api-key"];
+    apiKey.apiKey = process.env.BREVO_API_KEY;
+
     const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-    apiInstance.authentications["apiKey"].apiKey = process.env.BREVO_API_KEY;
 
     const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
     sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: "NeoMart" };
