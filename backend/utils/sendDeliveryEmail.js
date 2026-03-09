@@ -3,7 +3,7 @@ import nodemailer from "nodemailer";
 const createTransporter = () =>
   nodemailer.createTransport({
     host: "smtp-relay.brevo.com",
-    port: 587,
+    port: 2525,
     secure: false,
     auth: {
       user: process.env.EMAIL_USER,
@@ -316,7 +316,7 @@ export const sendOutForDeliveryEmail = async ({
   });
 };
 
-// confirmation 
+// confirmation
 export const sendDeliveryEmail = async ({ to, name, order }) => {
   if (!canSendEmail()) return;
 
