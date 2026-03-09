@@ -1,6 +1,6 @@
 import User from "../models/userModel.js";
 import jwt from "jsonwebtoken";
-import * as SibApiV3Sdk from "@getbrevo/brevo";
+import { TransactionalEmailsApi, SendSmtpEmail } from "@getbrevo/brevo";
 import asyncHandler from "express-async-handler";
 
 let otpStore = {};
@@ -26,19 +26,19 @@ export const sendOTP = async (req, res) => {
   otpStore[email] = otp;
 
   try {
-    const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
+    const apiInstance = new TransactionalEmailsApi();
     apiInstance.authentications["apiKey"].apiKey = process.env.BREVO_API_KEY;
 
-    await apiInstance.sendTransacEmail({
-      sender: { email: process.env.EMAIL_USER, name: "NeoMart" },
-      to: [{ email }],
-      subject: "OTP Verification - NeoMart",
-      textContent: `Your OTP is: ${otp}. Valid for 5 minutes.`,
-    });
+    const sendSmtpEmail = new SendSmtpEmail();
+    sendSmtpEmail.sender = { email: process.env.EMAIL_USER, name: "NeoMart" };
+    sendSmtpEmail.to = [{ email }];
+    sendSmtpEmail.subject = "OTP Verification - NeoMart";
+    sendSmtpEmail.textContent = `Your OTP is: ${otp}. Valid for 5 minutes.`;
 
+    await apiInstance.sendTransacEmail(sendSmtpEmail);
     res.status(200).json({ message: "OTP sent successfully" });
   } catch (error) {
-    console.error("Brevo error:", error);
+    console.error("Brevo error:", error?.response?.body || error.message);
     res.status(500).json({ message: "Failed to send OTP" });
   }
 };
