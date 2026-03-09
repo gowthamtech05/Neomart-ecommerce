@@ -13,6 +13,8 @@ const createTransporter = () =>
       rejectUnauthorized: false,
     },
     connectionTimeout: 15000,
+    // ✅ Force IPv4 — prevents resolving to IPv6 addresses
+    family: 4,
   });
 
 const canSendEmail = () => {
