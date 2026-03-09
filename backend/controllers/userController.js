@@ -1,6 +1,6 @@
 import User from "../models/userModel.js";
 import jwt from "jsonwebtoken";
-import SibApiV3Sdk from "@getbrevo/brevo";
+import SibApiV3Sdk from "sib-api-v3-sdk";
 import asyncHandler from "express-async-handler";
 
 let otpStore = {};
