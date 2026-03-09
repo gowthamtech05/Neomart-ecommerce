@@ -15,6 +15,7 @@ import {
   resetMonthlyStats,
   generateMonthlyReportPDF,
   verifyPayment,
+  updateOrderStatus,
 } from "../controllers/orderController.js";
 import { protect, admin } from "../middleware/authMiddleware.js";
 import PDFDocument from "pdfkit";
@@ -32,7 +33,6 @@ router.get("/", protect, admin, getAllOrders);
 
 router.post("/verify", verifyPayment);
 
-
 router.delete("/reset", protect, admin, resetOrders);
 router.put("/reset-monthly-data", protect, admin, resetMonthlyData);
 router.put("/reset-monthly-stats", protect, admin, resetMonthlyStats);
@@ -44,6 +44,9 @@ router.get("/admin/:id", protect, admin, getOrderById);
 router.put("/:id/refund", protect, admin, updateOrderToRefunded);
 router.put("/:id/deliver", protect, admin, markAsDelivered);
 router.put("/:id/cancel", protect, cancelOrder);
+
+// ✅ New route: Admin updates order status (triggers Out for Delivery OTP email)
+router.put("/:id/status", protect, admin, updateOrderStatus);
 
 router.get("/:id/invoice", protect, async (req, res) => {
   try {
