@@ -314,7 +314,7 @@ export const sendOutForDeliveryEmail = async ({
   });
 };
 
-// confirmation
+// confirmation 
 export const sendDeliveryEmail = async ({ to, name, order }) => {
   if (!canSendEmail()) return;
 
