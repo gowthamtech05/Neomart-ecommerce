@@ -112,7 +112,7 @@ export default function BecomePartnerPage() {
 
   const fetchProfile = async () => {
     try {
-      const { data } = await API.get("/delivery-partners/mine");
+      const { data } = await API.get("/api/delivery-partners/mine");
       setProfile(data);
     } catch {
       setProfile(null);
@@ -121,7 +121,7 @@ export default function BecomePartnerPage() {
 
   const fetchOrders = async () => {
     try {
-      const { data } = await API.get("/delivery-partners/my-orders");
+      const { data } = await API.get("/api/delivery-partners/my-orders");
       setOrders(Array.isArray(data) ? data : []);
     } catch {
       setOrders([]);
@@ -166,7 +166,7 @@ export default function BecomePartnerPage() {
       fd.append("area", area.trim());
       fd.append("district", district.trim());
       files.forEach((f) => fd.append("images", f));
-      const { data } = await API.post("/delivery-partners", fd, {
+      const { data } = await API.post("api/delivery-partners", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setProfile(data);
@@ -194,7 +194,7 @@ export default function BecomePartnerPage() {
     setOtp(orderId, { loading: true });
     try {
       const { data } = await API.post(
-        `/delivery-partners/orders/${orderId}/generate-otp`,
+        `/api/delivery-partners/orders/${orderId}/generate-otp`,
         {},
       );
       setOtp(orderId, {
@@ -214,7 +214,7 @@ export default function BecomePartnerPage() {
     if (!s.inputOtp?.trim()) return;
     setOtp(orderId, { loading: true });
     try {
-      await API.post(`/delivery-partners/orders/${orderId}/verify-otp`, {
+      await API.post(`/api/delivery-partners/orders/${orderId}/verify-otp`, {
         otp: s.inputOtp.trim(),
       });
       setOtpState((p) => {
