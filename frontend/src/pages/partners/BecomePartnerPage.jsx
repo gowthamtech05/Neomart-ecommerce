@@ -166,7 +166,7 @@ export default function BecomePartnerPage() {
       fd.append("area", area.trim());
       fd.append("district", district.trim());
       files.forEach((f) => fd.append("images", f));
-      const { data } = await API.post("api/delivery-partners", fd, {
+      const { data } = await API.post("/api/delivery-partners", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setProfile(data);
