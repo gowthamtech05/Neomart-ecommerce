@@ -1,13 +1,8 @@
 import bcrypt from "bcryptjs";
-import fs from "fs";
 import DeliveryPartner from "../models/deliveryPartnerModel.js";
 import Order from "../models/orderModel.js";
-import cloudinary from "../utils/cloudinary.js";
-import {
-  sendDeliveryEmail,
-  sendOtpEmail,
-  sendOrderSuccessEmail,
-} from "../utils/sendDeliveryEmail.js";
+import { sendDeliveryEmail, sendOtpEmail } from "../utils/sendDeliveryEmail.js";
+
 const generateOtp = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -39,18 +34,9 @@ export const registerDeliveryPartner = async (req, res) => {
         .status(400)
         .json({ message: "You already have an active application." });
 
-    let imageUrls = [];
-    if (req.files?.length > 0) {
-      for (const file of req.files) {
-        const result = await cloudinary.uploader.upload(file.path, {
-          folder: "delivery_partners",
-        });
-        imageUrls.push(result.secure_url);
-        fs.unlink(file.path, (err) => {
-          if (err) console.warn("Temp cleanup failed:", file.path);
-        });
-      }
-    }
+    // ✅ Fix: multer-storage-cloudinary sets file.path to the Cloudinary URL directly
+    // No need to call cloudinary.uploader.upload() or fs.unlink()
+    const imageUrls = req.files?.map((file) => file.path) || [];
 
     const partner = await DeliveryPartner.create({
       user: req.user._id,
@@ -163,6 +149,7 @@ export const generateDeliveryOtp = async (req, res) => {
     order.deliveryOtpExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
     order.orderStatus = "Out for Delivery";
     await order.save();
+
     try {
       if (order.user?.email) {
         await sendOtpEmail({
@@ -183,6 +170,7 @@ export const generateDeliveryOtp = async (req, res) => {
     res.status(500).json({ message: "Server error." });
   }
 };
+
 export const verifyDeliveryOtp = async (req, res) => {
   try {
     const { otp } = req.body;
@@ -209,7 +197,6 @@ export const verifyDeliveryOtp = async (req, res) => {
       return res.status(400).json({ message: "Order already delivered." });
     if (!order.deliveryOtp)
       return res.status(400).json({ message: "OTP not generated yet." });
-
     if (new Date() > order.deliveryOtpExpiresAt) {
       return res
         .status(400)
@@ -240,6 +227,7 @@ export const verifyDeliveryOtp = async (req, res) => {
     partner.totalDeliveries += 1;
     partner.isAvailable = true;
     await partner.save();
+
     try {
       if (order.user?.email) {
         await sendDeliveryEmail({
@@ -317,6 +305,7 @@ const TN_PIN_RANGES = [
   [627801, 627862, "Tenkasi"],
   [629001, 629901, "Kanniyakumari"],
 ];
+
 const TN_ALIASES = {
   trichy: "Tiruchirappalli",
   tiruchirappalli: "Tiruchirappalli",
@@ -362,10 +351,12 @@ const TN_ALIASES = {
   tirunelveli: "Tirunelveli",
   tenkasi: "Tenkasi",
 };
+
 const _norm = (s) =>
   String(s)
     .toLowerCase()
     .replace(/[^a-z]/g, "");
+
 const resolveDistrict = (input) => {
   if (!input) return null;
   const str = String(input).trim();
@@ -387,7 +378,6 @@ const resolveDistrict = (input) => {
 export const getActivePartners = async (req, res) => {
   try {
     const { lat, lng, pincode, district } = req.query;
-
     const orderDistrict = district?.trim() || resolveDistrict(pincode);
 
     console.log(
@@ -438,7 +428,6 @@ export const getActivePartners = async (req, res) => {
     if (lat && lng) {
       const refLat = parseFloat(lat);
       const refLng = parseFloat(lng);
-
       const withDistance = partners.map((p) => {
         const [pLng, pLat] = p.location?.coordinates || [0, 0];
         const hasLocation = pLng !== 0 || pLat !== 0;
@@ -452,7 +441,6 @@ export const getActivePartners = async (req, res) => {
           matchDistrict: orderDistrict || null,
         };
       });
-
       withDistance.sort((a, b) => a.distanceKm - b.distanceKm);
       return res.json(withDistance);
     }

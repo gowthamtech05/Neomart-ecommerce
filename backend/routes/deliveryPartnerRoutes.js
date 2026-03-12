@@ -1,7 +1,6 @@
 import express from "express";
-import multer from "multer";
-import path from "path";
 import { protect, admin } from "../middleware/authMiddleware.js";
+import { uploadDeliveryPartner } from "../utils/multer.js";
 import {
   registerDeliveryPartner,
   getMyPartnerProfile,
@@ -20,23 +19,15 @@ import {
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "uploads/"),
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
-});
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    /jpeg|jpg|png|webp/.test(path.extname(file.originalname).toLowerCase())
-      ? cb(null, true)
-      : cb(new Error("Images only"));
-  },
-  limits: { fileSize: 5 * 1024 * 1024 },
-});
-
 router.get("/mine", protect, getMyPartnerProfile);
 router.get("/my-orders", protect, getMyAssignedOrders);
-router.post("/", protect, upload.array("images", 5), registerDeliveryPartner);
+// ✅ Fix: replaced inline diskStorage multer with uploadDeliveryPartner (Cloudinary)
+router.post(
+  "/",
+  protect,
+  uploadDeliveryPartner.array("images", 5),
+  registerDeliveryPartner,
+);
 router.put("/location", protect, updateLocation);
 router.post("/orders/:orderId/generate-otp", protect, generateDeliveryOtp);
 router.post("/orders/:orderId/verify-otp", protect, verifyDeliveryOtp);
