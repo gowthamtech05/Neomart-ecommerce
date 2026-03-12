@@ -29,7 +29,6 @@ const STATUS_LABEL = {
 
 export default function AdminSellerRequests() {
   const navigate = useNavigate();
-  // ✅ No token — auth via httpOnly cookie
 
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,9 +82,13 @@ export default function AdminSellerRequests() {
       "Your request has been accepted! Let's chat about getting your products listed.";
     setActing((p) => ({ ...p, [id]: "accepting" }));
     try {
-      const { data } = await API.put(`/seller-requests/admin/${id}/accept`, {
-        adminReply: reply,
-      });
+      // ✅ Fix: added missing /api prefix
+      const { data } = await API.put(
+        `/api/seller-requests/admin/${id}/accept`,
+        {
+          adminReply: reply,
+        },
+      );
       setRequests((prev) => prev.map((r) => (r._id === id ? data : r)));
       setExpanded(id);
     } catch {
@@ -103,9 +106,13 @@ export default function AdminSellerRequests() {
     }
     setActing((p) => ({ ...p, [id]: "declining" }));
     try {
-      const { data } = await API.put(`/seller-requests/admin/${id}/decline`, {
-        adminReply: reply,
-      });
+      // ✅ Fix: added missing /api prefix
+      const { data } = await API.put(
+        `/api/seller-requests/admin/${id}/decline`,
+        {
+          adminReply: reply,
+        },
+      );
       setRequests((prev) => prev.map((r) => (r._id === id ? data : r)));
     } catch {
       alert("Failed to decline");
@@ -119,6 +126,7 @@ export default function AdminSellerRequests() {
     if (!msg) return;
     setActing((p) => ({ ...p, [`chat_${id}`]: true }));
     try {
+      // ✅ Fix: was using undefined `requestId` variable — replaced with `id`
       const { data } = await API.post(`/api/seller-requests/${id}/chat`, {
         message: msg,
         sender: "admin",

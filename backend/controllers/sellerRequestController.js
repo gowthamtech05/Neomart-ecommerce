@@ -48,9 +48,10 @@ export const createSellerRequest = async (req, res) => {
 
 export const getMySellerRequest = async (req, res) => {
   try {
-    const request = await SellerRequest.findOne({ user: req.user._id })
-      .populate("user", "name email")
-      .sort({ createdAt: -1 });
+    // ✅ Fix: .sort() is a no-op on findOne() — use options object instead
+    const request = await SellerRequest.findOne({ user: req.user._id }, null, {
+      sort: { createdAt: -1 },
+    }).populate("user", "name email");
 
     if (!request) {
       return res.status(404).json({ message: "No request found." });
@@ -129,13 +130,14 @@ export const declineSellerRequest = async (req, res) => {
 
 export const sendChatMessage = async (req, res) => {
   try {
-    const { message, sender } = req.body;
+    const { message } = req.body;
 
     if (!message || !message.trim()) {
       return res.status(400).json({ message: "Message cannot be empty." });
     }
 
-    const validSender = sender === "admin" ? "admin" : "user";
+    // ✅ Fix: derive sender from auth middleware — never trust client-supplied sender
+    const validSender = req.user.isAdmin ? "admin" : "user";
 
     const request = await SellerRequest.findById(req.params.id).populate(
       "user",
