@@ -1,6 +1,6 @@
 import express from "express";
 import { protect, admin } from "../middleware/authMiddleware.js";
-import { uploadDeliveryPartner } from "../utils/multer.js";
+import { uploadDeliveryPartner } from "../middleware/upload.js";
 import {
   registerDeliveryPartner,
   getMyPartnerProfile,
