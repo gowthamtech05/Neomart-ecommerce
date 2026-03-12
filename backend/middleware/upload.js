@@ -20,5 +20,29 @@ const storageProduct = new CloudinaryStorage({
   }),
 });
 
-export const upload = multer({ storage: storageAds }); // Use for ads/offers routes
-export const uploadProduct = multer({ storage: storageProduct }); // Use for product routes
+// ✅ For seller requests
+const storageSellerRequest = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => ({
+    folder: "seller_requests",
+    public_id: `seller-${Date.now()}-${Math.round(Math.random() * 1e6)}`,
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
+  }),
+});
+
+// ✅ For delivery partner applications
+const storageDeliveryPartner = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => ({
+    folder: "delivery_partners",
+    public_id: `partner-${Date.now()}-${Math.round(Math.random() * 1e6)}`,
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
+  }),
+});
+
+export const upload = multer({ storage: storageAds });
+export const uploadProduct = multer({ storage: storageProduct });
+export const uploadSellerRequest = multer({ storage: storageSellerRequest });
+export const uploadDeliveryPartner = multer({
+  storage: storageDeliveryPartner,
+});

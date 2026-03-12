@@ -1,5 +1,4 @@
 import SellerRequest from "../models/sellerRequestModel.js";
-import cloudinary from "../utils/cloudinary.js";
 
 export const createSellerRequest = async (req, res) => {
   try {
@@ -21,15 +20,8 @@ export const createSellerRequest = async (req, res) => {
       });
     }
 
-    let imageUrls = [];
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const result = await cloudinary.uploader.upload(file.path, {
-          folder: "seller_requests",
-        });
-        imageUrls.push(result.secure_url);
-      }
-    }
+    // ✅ multer-storage-cloudinary uploads directly — file.path is already the Cloudinary URL
+    const imageUrls = req.files?.map((file) => file.path) || [];
 
     const request = await SellerRequest.create({
       user: req.user._id,
@@ -48,7 +40,7 @@ export const createSellerRequest = async (req, res) => {
 
 export const getMySellerRequest = async (req, res) => {
   try {
-    // ✅ Fix: .sort() is a no-op on findOne() — use options object instead
+    // ✅ Sort via options object — .sort() is a no-op on findOne()
     const request = await SellerRequest.findOne({ user: req.user._id }, null, {
       sort: { createdAt: -1 },
     }).populate("user", "name email");
@@ -136,7 +128,7 @@ export const sendChatMessage = async (req, res) => {
       return res.status(400).json({ message: "Message cannot be empty." });
     }
 
-    // ✅ Fix: derive sender from auth middleware — never trust client-supplied sender
+    // ✅ Derive sender from auth — never trust client-supplied value
     const validSender = req.user.isAdmin ? "admin" : "user";
 
     const request = await SellerRequest.findById(req.params.id).populate(
