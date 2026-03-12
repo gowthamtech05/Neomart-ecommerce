@@ -1,6 +1,6 @@
 import express from "express";
 import { protect, admin } from "../middleware/authMiddleware.js";
-import { uploadSellerRequest } from "../utils/multer.js";
+import { uploadSellerRequest } from "../middleware/upload.js";
 
 import {
   createSellerRequest,
