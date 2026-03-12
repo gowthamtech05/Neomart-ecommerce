@@ -15,7 +15,7 @@ import {
   resetMonthlyStats,
   generateMonthlyReportPDF,
   verifyPayment,
-  updateOrderStatus, // ✅ NEW: handles "Out for Delivery" OTP email
+  updateOrderStatus,
 } from "../controllers/orderController.js";
 import { protect, admin } from "../middleware/authMiddleware.js";
 import PDFDocument from "pdfkit";
@@ -42,8 +42,8 @@ router.put("/admin/:id/cancel", protect, admin, adminCancelOrder);
 router.get("/admin/:id", protect, admin, getOrderById);
 
 router.put("/:id/refund", protect, admin, updateOrderToRefunded);
-router.put("/:id/deliver", protect, admin, markAsDelivered); // ✅ sends "Delivered" email
-router.put("/:id/status", protect, admin, updateOrderStatus); // ✅ sends OTP email on "Out for Delivery"
+router.put("/:id/deliver", protect, admin, markAsDelivered); 
+router.put("/:id/status", protect, admin, updateOrderStatus); 
 router.put("/:id/cancel", protect, cancelOrder);
 
 router.get("/:id/invoice", protect, async (req, res) => {
