@@ -10,23 +10,15 @@ import orderRoutes from "./routes/orderRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import adRoutes from "./routes/adRoutes.js";
 import offerRoutes from "./routes/offerRoutes.js";
-import path from "path";
-import { fileURLToPath } from "url";
 import homeProductRoutes from "./routes/homeProductRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import wishlistRoutes from "./routes/wishlistRoutes.js";
 import connectDB from "./config/db.js";
 import sellerRequestRoutes from "./routes/sellerRequestRoutes.js";
 import deliveryPartnerRoutes from "./routes/deliveryPartnerRoutes.js";
-
 import cookieParser from "cookie-parser";
 
 const app = express();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-app.use("/uploads", express.static(path.join(__dirname, "/uploads")));
 
 app.use(
   cors({
