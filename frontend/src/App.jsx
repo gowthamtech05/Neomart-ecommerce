@@ -521,7 +521,7 @@ function AppContent() {
 
   useEffect(() => {
     const ping = () => {
-      fetch(`${import.meta.env.VITE_API_URL}/api/health`).catch(() => {});
+      fetch(`${import.meta.env.VITE_API_URL}/health`).catch(() => {});
     };
     ping();
     const interval = setInterval(ping, 4 * 60 * 1000);
