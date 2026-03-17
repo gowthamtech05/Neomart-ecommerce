@@ -691,7 +691,7 @@ function AppContent() {
 
             <Link to="/" className="flex items-center gap-2 shrink-0">
               <img
-                src="/assets/vite.svg"
+                src="./assets\vite.svg"
                 alt="NeoMart"
                 className="w-7 h-7 md:w-8 md:h-8 rounded-lg"
               />
