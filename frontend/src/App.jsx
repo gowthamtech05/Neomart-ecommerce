@@ -520,6 +520,15 @@ function AppContent() {
   const wishlistCount = wishlist.length;
 
   useEffect(() => {
+    const ping = () => {
+      fetch(`${import.meta.env.VITE_API_URL}/api/health`).catch(() => {});
+    };
+    ping();
+    const interval = setInterval(ping, 4 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     const userInfo = localStorage.getItem("userInfo");
     const admin = localStorage.getItem("isAdmin");
     setIsLoggedIn(!!userInfo);
