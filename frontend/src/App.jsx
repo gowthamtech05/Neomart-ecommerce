@@ -689,15 +689,11 @@ function AppContent() {
               )}
             </button>
 
-            <Link to="/" className="flex items-center gap-2 shrink-0">
-              <img
-                src="/vite.svg"
-                alt="NeoMart"
-                className="w-7 h-7 md:w-8 md:h-8 rounded-lg"
-              />
-              <span className="text-xl md:text-2xl font-black tracking-tighter text-gray-900">
-                NEO<span style={{ color: "#6FAF8E" }}>MART</span>
-              </span>
+            <Link
+              to="/"
+              className="text-xl md:text-2xl font-black tracking-tighter text-gray-900 shrink-0"
+            >
+              NEO<span style={{ color: "#6FAF8E" }}>MART</span>
             </Link>
 
             <div className="hidden lg:flex items-center space-x-4 ml-2">
