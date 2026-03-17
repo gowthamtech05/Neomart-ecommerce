@@ -293,18 +293,17 @@ const Cart = () => {
   });
   const processPayment = async () => {
     if (!selectedAddress) return alert("Select a delivery address");
-    setLoading(true); // show loading immediately, keep modal open
+    setLoading(true); 
 
     try {
       if (paymentMethod === "ONLINE") {
-        // ✅ Fire both requests in parallel
         const [{ data: orderData }, { data: rzpData }] = await Promise.all([
           API.post("/api/orders", buildOrderPayload("ONLINE", false)),
           API.post("/api/payment/create-order", { amount: grandTotal }),
         ]);
         const mongoOrderId = orderData._id;
 
-        setShowAddressForm(false); // close modal only when ready to open Razorpay
+        setShowAddressForm(false); 
 
         new window.Razorpay({
           key: rzpData.key,
@@ -316,7 +315,6 @@ const Cart = () => {
             setOrderSuccess(true);
             setCartItems([]);
 
-            // background
             try {
               await API.post("/api/orders/verify", {
                 razorpay_order_id: res.razorpay_order_id,
@@ -344,7 +342,6 @@ const Cart = () => {
           theme: { color: "#6FAF8E" },
         }).open();
       } else {
-        // COD
         await API.post("/api/orders", buildOrderPayload("COD", false));
         await API.delete("/api/cart");
         setCartItems([]);

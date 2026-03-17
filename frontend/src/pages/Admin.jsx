@@ -1,5 +1,5 @@
 import { useState } from "react";
-import API from "../api/axios.js"; // <-- use your centralized API instance
+import API from "../api/axios.js";
 import {
   Package,
   Tag,
@@ -167,7 +167,6 @@ function Admin() {
           onSubmit={submitHandler}
           className="flex flex-col lg:flex-row gap-4 sm:gap-6"
         >
-          {/* Left Form Fields */}
           <div className="flex-1 space-y-4 sm:space-y-5">
             <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6">
               <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-400 mb-4 sm:mb-5">
@@ -198,7 +197,6 @@ function Admin() {
               </div>
             </div>
 
-            {/* Description */}
             <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6">
               <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-400 mb-3 sm:mb-4">
                 Description
@@ -220,9 +218,7 @@ function Admin() {
             </div>
           </div>
 
-          {/* Right: Image + Submit */}
           <div className="lg:w-64 xl:w-72 space-y-4 sm:space-y-5">
-            {/* Image Upload */}
             <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-100 shadow-sm p-4 sm:p-6">
               <h2 className="text-xs sm:text-sm font-black uppercase tracking-widest text-gray-400 mb-3 sm:mb-4">
                 Product Image
@@ -270,7 +266,6 @@ function Admin() {
               )}
             </div>
 
-            {/* Pricing Summary */}
             {(formData.price || formData.discountedPrice) && (
               <div className="bg-gray-900 text-white rounded-2xl sm:rounded-3xl p-4 sm:p-5">
                 <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">
@@ -306,7 +301,6 @@ function Admin() {
               </div>
             )}
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={submitting}

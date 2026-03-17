@@ -21,7 +21,6 @@ const router = express.Router();
 
 router.get("/mine", protect, getMyPartnerProfile);
 router.get("/my-orders", protect, getMyAssignedOrders);
-// ✅ Fix: replaced inline diskStorage multer with uploadDeliveryPartner (Cloudinary)
 router.post(
   "/",
   protect,

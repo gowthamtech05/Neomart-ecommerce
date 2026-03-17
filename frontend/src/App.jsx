@@ -526,7 +526,6 @@ function AppContent() {
     setIsAdmin(admin === "true");
   }, [location.pathname]);
 
-  // ✅ Force logout users with old sessions (no token = iOS won't work)
   useEffect(() => {
     try {
       const raw = localStorage.getItem("userInfo");
@@ -544,7 +543,7 @@ function AppContent() {
       setIsLoggedIn(false);
       setIsAdmin(false);
     }
-  }, []); // runs once on app load
+  }, []);
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -1045,8 +1044,6 @@ function BottomNavItem({ to, icon, label, active }) {
     </Link>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
 export default function App() {
   const [showSplash, setShowSplash] = useState(
     () => !sessionStorage.getItem("splashShown"),

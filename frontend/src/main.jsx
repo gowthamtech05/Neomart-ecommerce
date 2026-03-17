@@ -1,11 +1,8 @@
-// main.jsx ✅ final version
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { BrowserRouter } from "react-router-dom";
 import "./index.css";
-
-// Keep Render backend warm — prevents 30-60s cold start delay
 if (import.meta.env.PROD) {
   const base = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "");
   if (base) {

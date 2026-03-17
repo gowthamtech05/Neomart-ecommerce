@@ -20,7 +20,6 @@ const AdSlider = () => {
     fetchAds();
   }, []);
 
-  // Auto-slide logic
   useEffect(() => {
     if (ads.length <= 1) return;
     const timer = setInterval(() => {

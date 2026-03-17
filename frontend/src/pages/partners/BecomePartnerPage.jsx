@@ -106,8 +106,6 @@ export default function BecomePartnerPage() {
   const [district, setDistrict] = useState("");
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
-
-  // per-order OTP state: { [orderId]: { generatedOtp, inputOtp, loading, showVerify, showOtp } }
   const [otpState, setOtpState] = useState({});
 
   const fetchProfile = async () => {

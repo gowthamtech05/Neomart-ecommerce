@@ -34,7 +34,6 @@ export const createPayment = async (req, res) => {
   }
 };
 
-// ✅ FIXED — update the order after verification
 export const verifyPayment = async (req, res) => {
   try {
     const {
@@ -58,7 +57,6 @@ export const verifyPayment = async (req, res) => {
       return res.status(400).json({ message: "Invalid signature" });
     }
 
-    // ✅ Actually update the order
     if (orderId) {
       await Order.findByIdAndUpdate(orderId, {
         isPaid: true,

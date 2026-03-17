@@ -20,7 +20,6 @@ const storageProduct = new CloudinaryStorage({
   }),
 });
 
-// ✅ For seller requests
 const storageSellerRequest = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
@@ -30,7 +29,6 @@ const storageSellerRequest = new CloudinaryStorage({
   }),
 });
 
-// ✅ For delivery partner applications
 const storageDeliveryPartner = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({

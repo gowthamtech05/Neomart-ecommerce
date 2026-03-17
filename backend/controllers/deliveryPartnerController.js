@@ -28,8 +28,6 @@ export const registerDeliveryPartner = async (req, res) => {
     const existing = await DeliveryPartner.findOne({
       user: req.user._id,
     });
-
-    // 🚫 Block if already active
     if (existing && ["pending", "accepted"].includes(existing.status)) {
       return res.status(400).json({
         message: "You already have an active application.",
@@ -55,9 +53,6 @@ export const registerDeliveryPartner = async (req, res) => {
 
       return res.json(existing);
     }
-
-    // ✅ Fix: multer-storage-cloudinary sets file.path to the Cloudinary URL directly
-    // No need to call cloudinary.uploader.upload() or fs.unlink()
     const imageUrls = req.files?.map((file) => file.path) || [];
 
     const partner = await DeliveryPartner.create({

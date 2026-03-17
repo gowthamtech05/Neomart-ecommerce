@@ -60,7 +60,6 @@ const AdminDashboard = () => {
     const margin = 40;
     const brandColor = "#6FAF8E";
 
-    // 1. BRANDED HEADER
     doc.setFillColor(brandColor);
     doc.rect(0, 0, pageWidth, 100, "F");
 
@@ -77,8 +76,6 @@ const AdminDashboard = () => {
       pageWidth - margin - 120,
       75,
     );
-
-    // 2. STATISTICS GRID
     let yPos = 140;
     const cardWidth = (pageWidth - margin * 2 - 20) / 2;
     const cardHeight = 65;
@@ -99,21 +96,17 @@ const AdminDashboard = () => {
       const currentRow = Math.floor(index / 2);
       const currentY = yPos + currentRow * (cardHeight + 15);
 
-      // Light background for cards
       doc.setFillColor("#F8FAFC");
       doc.roundedRect(xPos, currentY, cardWidth, cardHeight, 6, 6, "F");
 
-      // Card Accent (Small vertical bar on the left)
       doc.setFillColor(brandColor);
       doc.rect(xPos, currentY + 15, 3, 35, "F");
 
-      // Label text
       doc.setFontSize(9);
       doc.setTextColor("#64748B");
       doc.setFont("helvetica", "bold");
       doc.text(stat.label.toUpperCase(), xPos + 15, currentY + 22);
 
-      // Value text
       doc.setFontSize(16);
       doc.setTextColor("#1E293B");
       doc.text(`${stat.value}`, xPos + 15, currentY + 48);
@@ -121,7 +114,6 @@ const AdminDashboard = () => {
 
     yPos += Math.ceil(stats.length / 2) * (cardHeight + 15) + 40;
 
-    // 3. LOW STOCK SECTION
     doc.setFontSize(16);
     doc.setTextColor(brandColor);
     doc.setFont("helvetica", "bold");
@@ -139,7 +131,6 @@ const AdminDashboard = () => {
       doc.setFont("helvetica", "normal");
       doc.text("All inventory levels are currently healthy.", margin, yPos);
     } else {
-      // Table Header
       doc.setFontSize(10);
       doc.setTextColor("#94A3B8");
       doc.text("PRODUCT NAME", margin, yPos);
@@ -153,7 +144,6 @@ const AdminDashboard = () => {
       yPos += 20;
 
       normalizedData.lowStockProducts.forEach((p) => {
-        // Page break check
         if (yPos > 780) {
           doc.addPage();
           yPos = 50;
@@ -164,18 +154,16 @@ const AdminDashboard = () => {
         doc.setFont("helvetica", "normal");
         doc.text(p.name, margin, yPos);
 
-        doc.setTextColor("#EF4444"); // Red for alerts
+        doc.setTextColor("#EF4444"); 
         doc.setFont("helvetica", "bold");
         doc.text(`${p.quantity} Units`, pageWidth - margin - 100, yPos);
 
         yPos += 20;
-        // Subtle row line
         doc.setDrawColor("#F1F5F9");
         doc.line(margin, yPos - 5, pageWidth - margin, yPos - 5);
       });
     }
 
-    // 4. FOOTER
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);

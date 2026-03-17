@@ -10,7 +10,6 @@ import API from "../api/axios.js";
 
 const CartContext = createContext();
 
-// ✅ Outside component — never recreated
 const mergeCartData = (items) => {
   return items.reduce((acc, current) => {
     const productId = current.product?._id || current.product || current._id;
@@ -29,7 +28,6 @@ const mergeCartData = (items) => {
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
 
-  // ✅ useCallback — stable reference, never recreated
   const fetchCart = useCallback(async () => {
     try {
       const { data } = await API.get("/api/cart");
@@ -40,9 +38,8 @@ export const CartProvider = ({ children }) => {
     } catch (err) {
       console.error("Fetch Cart Error:", err);
     }
-  }, []); // no deps — never changes
+  }, []); 
 
-  // ✅ useCallback — stable reference
   const addToCart = useCallback(async (product, quantity = 1) => {
     try {
       const { data } = await API.post("/api/cart", {
@@ -61,9 +58,8 @@ export const CartProvider = ({ children }) => {
 
   useEffect(() => {
     fetchCart();
-  }, []); // ✅ fetchCart is now stable so this is safe
+  }, []);
 
-  // ✅ useMemo — context value only changes when cartItems changes
   const value = useMemo(
     () => ({ cartItems, addToCart, fetchCart, setCartItems }),
     [cartItems, addToCart, fetchCart],

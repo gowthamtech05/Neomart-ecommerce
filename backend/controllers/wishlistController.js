@@ -44,7 +44,6 @@ export const toggleWishlist = async (req, res) => {
 
     res.json({ wishlist: user.wishlist });
   } catch (err) {
-    // THIS will show the real error in Render logs
     console.error("toggleWishlist FULL ERROR:", {
       message: err.message,
       name: err.name,

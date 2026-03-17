@@ -19,8 +19,6 @@ export const createSellerRequest = async (req, res) => {
           "You already have an active request. Please wait for a response.",
       });
     }
-
-    // ✅ multer-storage-cloudinary uploads directly — file.path is already the Cloudinary URL
     const imageUrls = req.files?.map((file) => file.path) || [];
 
     const request = await SellerRequest.create({
@@ -40,7 +38,6 @@ export const createSellerRequest = async (req, res) => {
 
 export const getMySellerRequest = async (req, res) => {
   try {
-    // ✅ Sort via options object — .sort() is a no-op on findOne()
     const request = await SellerRequest.findOne({ user: req.user._id }, null, {
       sort: { createdAt: -1 },
     }).populate("user", "name email");
@@ -128,7 +125,6 @@ export const sendChatMessage = async (req, res) => {
       return res.status(400).json({ message: "Message cannot be empty." });
     }
 
-    // ✅ Derive sender from auth — never trust client-supplied value
     const validSender = req.user.isAdmin ? "admin" : "user";
 
     const request = await SellerRequest.findById(req.params.id).populate(

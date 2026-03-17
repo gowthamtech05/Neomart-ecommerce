@@ -30,13 +30,11 @@ const sendMail = async ({ to, subject, html }) => {
   }
 };
 
-// ─── Design tokens ────────────────────────────────────────────────────────────
 const GREEN = "#6FAF8E";
 const DARK = "#1A1A1A";
 const BG = "#F4F7F6";
 const BORDER = "#f0f0f0";
 
-// ─── Shared HTML helpers ──────────────────────────────────────────────────────
 const emailShell = (bodyContent) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -149,7 +147,6 @@ const ctaButton = (label, path) => `
     </a>
   </div>`;
 
-// ─── 1. Order Placed ──────────────────────────────────────────────────────────
 export const sendOrderSuccessEmail = async ({ to, name, order }) => {
   const orderId = String(order._id).slice(-8).toUpperCase();
   const isCOD = order.paymentMethod === "COD";
@@ -217,7 +214,6 @@ export const sendOrderSuccessEmail = async ({ to, name, order }) => {
   });
 };
 
-// ─── 2. Out for Delivery ──────────────────────────────────────────────────────
 export const sendOutForDeliveryEmail = async ({
   to,
   name,
@@ -260,7 +256,6 @@ export const sendOutForDeliveryEmail = async ({
   });
 };
 
-// ─── 3. Order Delivered ───────────────────────────────────────────────────────
 export const sendDeliveryEmail = async ({ to, name, order }) => {
   const orderId = String(order._id).slice(-8).toUpperCase();
   const deliveredAt = new Date(order.deliveredAt || Date.now()).toLocaleString(
@@ -313,7 +308,6 @@ export const sendDeliveryEmail = async ({ to, name, order }) => {
   });
 };
 
-// ─── 4. OTP Email ────────────────────────────────────────────────────────────
 export const sendOtpEmail = async ({ to, name, otp, order, partnerName }) => {
   const orderId = String(order._id).slice(-8).toUpperCase();
   const itemCount = order.orderItems?.length || 0;

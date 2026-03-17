@@ -6,7 +6,6 @@ const SplashScreen = ({ onDone }) => {
   const [fadeOut, setFadeOut] = useState(false);
 
   useEffect(() => {
-    // Animate progress bar 0 → 100 over 4.2s using rAF for smoothness
     const start = performance.now();
     const duration = 1800;
     let raf;
@@ -19,7 +18,6 @@ const SplashScreen = ({ onDone }) => {
     };
     raf = requestAnimationFrame(tick);
 
-    // Start fade-out at 4.3s, unmount at 5s
     const fadeTimer = setTimeout(() => setFadeOut(true), 1900);
     const doneTimer = setTimeout(onDone, 2500);
 

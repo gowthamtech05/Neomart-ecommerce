@@ -8,7 +8,6 @@ import { calculateDiscountedPrice } from "../utils/offerUtils";
 import { Heart } from "lucide-react";
 import specialOfferBadge from "../assets/Offer badge.png";
 
-/* ── Mini product card matching ProductCard UI ── */
 const CategoryProductCard = ({ product, isLowestPriceItem = false }) => {
   const navigate = useNavigate();
   const { addToCart } = useCart();
@@ -184,7 +183,7 @@ const CategoryProductCard = ({ product, isLowestPriceItem = false }) => {
   );
 };
 
-/* ── Category Page ── */
+/*  Category Page */
 const CategoryPage = () => {
   const { categoryName } = useParams();
   const navigate = useNavigate();
@@ -217,7 +216,7 @@ const CategoryPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
-      {/* Header — flush to navbar, no gap */}
+      {/* Header */}
       <div className="bg-white border-b px-3 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center gap-2 sm:gap-3">
         <button
           onClick={() => navigate(-1)}

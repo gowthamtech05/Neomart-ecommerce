@@ -47,19 +47,15 @@ export default function SearchResultsPage() {
 
     fetchSearch();
   }, [searchTerm]);
-
-  // Apply filters whenever results or any filter selection changes
   useEffect(() => {
     let filtered = [...results];
 
-    // Brand filter
     if (selectedBrands.length > 0) {
       filtered = filtered.filter((p) =>
         selectedBrands.includes(p.brand?.trim() || "Unknown Brand"),
       );
     }
 
-    // Price filter — a product passes if it matches ANY selected range
     if (selectedPrices.length > 0) {
       filtered = filtered.filter((p) => {
         const price =
@@ -71,7 +67,6 @@ export default function SearchResultsPage() {
       });
     }
 
-    // Discount filter — a product passes if its discount meets ANY selected threshold
     if (selectedDiscounts.length > 0) {
       filtered = filtered.filter((p) => {
         const discount =
@@ -83,8 +78,6 @@ export default function SearchResultsPage() {
         return selectedDiscounts.some((d) => discount >= Number(d));
       });
     }
-
-    // Availability filter
     if (selectedAvailability.length > 0) {
       filtered = filtered.filter((p) => {
         const stock = p.stock ?? p.quantity ?? p.stockQuantity ?? 0;

@@ -59,8 +59,6 @@ const TN_DISTRICTS = [
   "Villupuram",
   "Virudhunagar",
 ];
-
-// Safe image URL builder — avoids double-slash on mobile
 function buildImageUrl(src) {
   if (!src) return "";
   if (src.startsWith("http://") || src.startsWith("https://")) return src;
@@ -105,10 +103,8 @@ const ProductDetails = () => {
   const [showFullDesc, setShowFullDesc] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
-  // FIX: Read userInfo inside useEffect/useMemo — never at module top level
   const [userInfo, setUserInfo] = useState({});
 
-  // Address & User Sync
   const [dbUser, setDbUser] = useState(null);
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [locating, setLocating] = useState(false);
@@ -120,7 +116,6 @@ const ProductDetails = () => {
   });
   const [editingAddress, setEditingAddress] = useState(null);
 
-  // Admin States
   const [showAdminEdit, setShowAdminEdit] = useState(false);
   const [editQuantity, setEditQuantity] = useState(0);
   const [editMfgDate, setEditMfgDate] = useState("");
@@ -129,7 +124,6 @@ const ProductDetails = () => {
   const [editPrice, setEditPrice] = useState(0);
   const [editDiscountedPrice, setEditDiscountedPrice] = useState(0);
 
-  // FIX: Safe localStorage read inside useEffect
   useEffect(() => {
     try {
       const raw = localStorage.getItem("userInfo");
@@ -382,7 +376,6 @@ const ProductDetails = () => {
           orderStatus: "Not Paid",
         };
 
-        // ✅ Parallel API calls — saves 1-3 seconds
         const [{ data: orderData }, { data: rzpData }] = await Promise.all([
           API.post("/api/orders", orderPayload),
           API.post("/api/payment/create-order", {
@@ -404,12 +397,10 @@ const ProductDetails = () => {
             display: { hide: [], preferences: { show_default_blocks: true } },
           },
           handler: async (res) => {
-            // ✅ Show success instantly — don't wait for verify
             setOrderSuccess(true);
             setShowPaymentModal(false);
             setProcessingOrder(false);
 
-            // Verify silently in background
             try {
               await API.post("/api/orders/verify", {
                 razorpay_order_id: res.razorpay_order_id,
@@ -433,7 +424,6 @@ const ProductDetails = () => {
           theme: { color: "#6FAF8E" },
         }).open();
       } else {
-        // COD
         await saveOrderToDB("COD", false);
       }
     } catch (err) {
@@ -513,11 +503,11 @@ const ProductDetails = () => {
         )}
       </nav>
 
-      {/* FIX: Correct spacer height — nav is always at top-0 on mobile */}
+    
       <div className="h-16 md:h-[81px]"></div>
 
       <div className="bg-white p-6 flex justify-center border-b">
-        {/* FIX: Use safe URL builder instead of raw template literal */}
+
         <img
           src={buildImageUrl(mainImage)}
           className="h-96 object-contain"
@@ -604,7 +594,6 @@ const ProductDetails = () => {
 
       <div className="mt-2 p-5 bg-white">
         <h2 className="font-bold mb-4">Similar Products</h2>
-        {/* FIX: Added -webkit-overflow-scrolling for iOS Safari touch scroll */}
         <div
           className="flex overflow-x-auto gap-4 pb-6 scrollbar-hide"
           style={{ WebkitOverflowScrolling: "touch" }}
@@ -635,12 +624,12 @@ const ProductDetails = () => {
       )}
 
       {showPaymentModal && (
-        // FIX: Added pb-safe and proper bottom handling for iOS home bar
+
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-[100] p-0 sm:p-4">
           <div
             className="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl overflow-y-auto"
             style={{
-              maxHeight: "90dvh", // FIX: dvh instead of vh — accounts for iOS Safari toolbar
+              maxHeight: "90dvh", 
               paddingBottom: "env(safe-area-inset-bottom, 16px)",
             }}
           >
@@ -781,7 +770,6 @@ const ProductDetails = () => {
                 ))}
               </div>
 
-              {/* Add New Address */}
               <div className="border-2 border-dashed rounded-xl p-3 space-y-2 mt-2">
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] sm:text-xs font-bold text-gray-500">
@@ -856,7 +844,6 @@ const ProductDetails = () => {
               </div>
             </div>
 
-            {/* Order Summary */}
             <div className="bg-gray-50 rounded-xl p-3 mb-4 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Product Price</span>
@@ -911,7 +898,6 @@ const ProductDetails = () => {
         </div>
       )}
 
-      {/* Order Success */}
       {orderSuccess && (
         <div className="fixed inset-0 bg-white flex flex-col items-center justify-center z-[110]">
           <CheckCircle
@@ -928,7 +914,6 @@ const ProductDetails = () => {
         </div>
       )}
 
-      {/* Admin Modal */}
       {showAdminEdit && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[120] p-4">
           <div className="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl overflow-y-auto max-h-[80vh]">

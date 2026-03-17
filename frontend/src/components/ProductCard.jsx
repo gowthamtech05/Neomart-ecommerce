@@ -18,7 +18,6 @@ const ProductCard = ({ product, isLowestPriceItem = false }) => {
   const isLoyal = loyaltyPoints >= 20;
   const isPlusMember = userInfo?.isPlusMember || false;
 
-  // ── Clamp stock: negative DB values treated as 0 ────────────────────────────
   const stock = Math.max(0, Number(product.quantity) || 0);
   const isOutOfStock = stock === 0;
   const isLowStock = stock >= 1 && stock <= 10;
@@ -42,7 +41,6 @@ const ProductCard = ({ product, isLowestPriceItem = false }) => {
     !showNewUserBadge && isLoyal && offerData.appliedLabel === "LOYALTY OFFER";
   const showPlusBadge = !showNewUserBadge && !showLoyalBadge && isPlusMember;
 
-  // ── Status line: one consistent line height for every card ──────────────────
   const statusLine = isOutOfStock ? (
     <p className="text-red-500 text-[8px] xs:text-[9px] sm:text-[10px] font-bold">
       No stock
@@ -112,7 +110,7 @@ const ProductCard = ({ product, isLowestPriceItem = false }) => {
         </div>
       )}
 
-      {/* ── Image — fixed height, never stretches ── */}
+      {/* Image*/}
       <div className="relative w-full h-28 xs:h-32 sm:h-36 md:h-40 lg:h-44 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
         <img
           src={product.images?.[0] || "https://via.placeholder.com/200"}
@@ -127,20 +125,18 @@ const ProductCard = ({ product, isLowestPriceItem = false }) => {
           />
         )}
       </div>
-
-      {/* ── Info — fixed structure, no flex-1 on middle rows ── */}
       <div className="p-2 xs:p-2.5 sm:p-3 flex flex-col">
-        {/* Brand — fixed 1 line */}
+        {/* Brand */}
         <p className="text-[8px] xs:text-[9px] sm:text-[10px] uppercase text-gray-400 font-semibold truncate">
           {product.brand || "Brand"}
         </p>
 
-        {/* Name — fixed 2 lines with clamp */}
+        {/* Name */}
         <h3 className="text-[11px] xs:text-xs sm:text-[13px] md:text-sm text-gray-800 font-medium line-clamp-2 group-hover:text-[#6FAF8E] mt-0.5 leading-snug min-h-[2.4em]">
           {product.name}
         </h3>
 
-        {/* Price row — fixed 1 line */}
+        {/* Price row */}
         <div className="mt-1 sm:mt-1.5 flex items-center gap-1 sm:gap-1.5 flex-wrap">
           <span className="text-sm xs:text-base sm:text-lg font-bold text-gray-900">
             ₹{finalPrice}
@@ -157,7 +153,7 @@ const ProductCard = ({ product, isLowestPriceItem = false }) => {
           )}
         </div>
 
-        {/* Savings — always reserve 1 line height */}
+        {/* Savings */}
         <div className="min-h-[1.1em] mt-0.5">
           {totalSavings > 0 && (
             <p className="text-[8px] xs:text-[9px] sm:text-[10px] text-green-600 font-semibold">
@@ -166,15 +162,15 @@ const ProductCard = ({ product, isLowestPriceItem = false }) => {
           )}
         </div>
 
-        {/* Status — always reserve 1 line height */}
+        {/* Status */}
         <div className="min-h-[1.1em] mt-1 sm:mt-1.5">{statusLine}</div>
 
-        {/* Delivery — fixed 1 line */}
+        {/* Delivery */}
         <p className="text-[7px] xs:text-[8px] sm:text-[9px] md:text-[10px] text-green-600 font-semibold mt-1">
           {isPlusMember ? "✨ Free Delivery (Plus)" : "Free Delivery"}
         </p>
 
-        {/* ── Add to cart button ── */}
+        {/*Add to cart*/}
         <button
           onClick={(e) => {
             e.stopPropagation();

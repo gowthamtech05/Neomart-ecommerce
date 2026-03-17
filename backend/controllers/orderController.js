@@ -14,7 +14,6 @@ import {
   sendOtpEmail,
 } from "../utils/sendDeliveryEmail.js";
 
-// ─── Loyalty & Streak ────────────────────────────────────────────────────────
 const updateLoyaltyStreak = async (userId, orderAmount) => {
   const user = await User.findById(userId);
   if (!user || orderAmount < 500) return;
@@ -53,7 +52,6 @@ const updateLoyaltyStreak = async (userId, orderAmount) => {
   await user.save();
 };
 
-// ─── Create Order ─────────────────────────────────────────────────────────────
 export const createOrder = asyncHandler(async (req, res) => {
   const { orderItems, totalPrice, paymentMethod, isPaid, shippingAddress } =
     req.body;
@@ -76,12 +74,10 @@ export const createOrder = asyncHandler(async (req, res) => {
 
   const createdOrder = await order.save();
 
-  // ✅ Always fetch user directly — guarantees name + email are available
   const orderUser = await User.findById(req.user._id).select(
     "name email firstOrderCompleted",
   );
 
-  // ✅ Mark firstOrderCompleted on first order
   try {
     if (orderUser && !orderUser.firstOrderCompleted) {
       orderUser.firstOrderCompleted = true;
@@ -92,7 +88,6 @@ export const createOrder = asyncHandler(async (req, res) => {
     console.error("❌ firstOrderCompleted update failed:", err.message);
   }
 
-  // ✅ EMAIL 1: Order confirmed
   try {
     if (orderUser?.email) {
       await sendOrderSuccessEmail({
@@ -121,7 +116,6 @@ export const createOrder = asyncHandler(async (req, res) => {
   res.status(201).json(createdOrder);
 });
 
-// ─── Verify Razorpay Payment ──────────────────────────────────────────────────
 export const verifyPayment = asyncHandler(async (req, res) => {
   const {
     razorpay_order_id,
@@ -167,7 +161,6 @@ export const verifyPayment = asyncHandler(async (req, res) => {
   res.json(order);
 });
 
-// ─── Update Order Status (Admin) ──────────────────────────────────────────────
 export const updateOrderStatus = asyncHandler(async (req, res) => {
   const { status, partnerName } = req.body;
 
@@ -182,8 +175,6 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
 
   order.orderStatus = status;
   await order.save();
-
-  // ✅ EMAIL 2: Out for delivery — send OTP email + out-for-delivery email
   if (status === "Out for Delivery") {
     try {
       if (order.user?.email) {
@@ -199,8 +190,6 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
           partnerName: partnerName || "our delivery partner",
           otp,
         });
-
-        // Out for delivery notification email
         await sendOutForDeliveryEmail({
           to: order.user.email,
           name: order.user.name,
@@ -222,7 +211,6 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   res.json(order);
 });
 
-// ─── Mark as Delivered ────────────────────────────────────────────────────────
 export const markAsDelivered = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id).populate(
     "user",
@@ -254,7 +242,6 @@ export const markAsDelivered = asyncHandler(async (req, res) => {
   await updateLoyaltyStreak(order.user._id || order.user, order.totalPrice);
   await order.save();
 
-  // ✅ EMAIL 3: Delivered confirmation
   try {
     if (order.user?.email) {
       await sendDeliveryEmail({
@@ -273,7 +260,6 @@ export const markAsDelivered = asyncHandler(async (req, res) => {
   res.json(order);
 });
 
-// ─── Cancel Order (User) ──────────────────────────────────────────────────────
 export const cancelOrder = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
   if (!order || order.user.toString() !== req.user._id.toString())
@@ -303,7 +289,6 @@ export const cancelOrder = asyncHandler(async (req, res) => {
   res.json({ message: "Order cancelled successfully" });
 });
 
-// ─── Admin Cancel Order ───────────────────────────────────────────────────────
 export const adminCancelOrder = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
   if (!order) throw new Error("Order not found");
@@ -332,7 +317,6 @@ export const adminCancelOrder = asyncHandler(async (req, res) => {
   res.json({ message: "Order cancelled by admin successfully" });
 });
 
-// ─── Refund Order ─────────────────────────────────────────────────────────────
 export const updateOrderToRefunded = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
 
@@ -359,7 +343,6 @@ export const updateOrderToRefunded = asyncHandler(async (req, res) => {
   res.json(order);
 });
 
-// ─── Admin Dashboard ──────────────────────────────────────────────────────────
 export const getAdminDashboard = async (req, res) => {
   try {
     let stats = await DashboardStats.findOne();
@@ -388,7 +371,6 @@ export const getAdminDashboard = async (req, res) => {
   }
 };
 
-// ─── Get Orders ───────────────────────────────────────────────────────────────
 export const getMyOrders = asyncHandler(async (req, res) => {
   const orders = await Order.find({ user: req.user._id }).sort({
     createdAt: -1,
@@ -437,7 +419,6 @@ export const getOrderById = async (req, res) => {
   }
 };
 
-// ─── Admin Utilities ──────────────────────────────────────────────────────────
 export const resetOrders = asyncHandler(async (req, res) => {
   await Order.updateMany({}, { $set: { isAdminArchived: true } });
   res
@@ -518,7 +499,6 @@ export const resetMonthlyStats = async (req, res) => {
   }
 };
 
-// ─── Generate Monthly Report PDF ──────────────────────────────────────────────
 export const generateMonthlyReportPDF = asyncHandler(async (req, res) => {
   try {
     const orders = await Order.find({});
