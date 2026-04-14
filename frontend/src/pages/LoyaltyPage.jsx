@@ -72,7 +72,6 @@ const LoyaltyPage = () => {
     try {
       setProcessing(true);
 
-      // 1. Load Razorpay SDK
       const loaded = await loadRazorpayScript();
       if (!loaded) {
         alert("Failed to load payment gateway. Please try again.");
@@ -80,12 +79,10 @@ const LoyaltyPage = () => {
         return;
       }
 
-      // 2. Reuse the same route cart uses — just pass 299 as the amount
       const { data: rzpData } = await API.post("/api/payment/create-order", {
         amount: 299,
       });
 
-      // 3. Open Razorpay checkout
       await new Promise((resolve, reject) => {
         const rzp = new window.Razorpay({
           key: rzpData.key,
@@ -101,15 +98,13 @@ const LoyaltyPage = () => {
           },
           handler: async (response) => {
             try {
-              // 4. Verify payment & activate Plus — same verify route, with isPlus flag
               await API.post("/api/orders/verify", {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
-                isPlus: true, // backend checks this and sets isPlusMember: true on user
+                isPlus: true,
               });
 
-              // 5. Update UI immediately — no page reload needed
               setIsPlus(true);
               fetchUserData();
               resolve();
@@ -120,7 +115,7 @@ const LoyaltyPage = () => {
           modal: {
             ondismiss: () => {
               setProcessing(false);
-              resolve(); // dismissed cleanly, no error alert
+              resolve();
             },
           },
         });
