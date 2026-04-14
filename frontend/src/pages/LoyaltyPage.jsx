@@ -11,8 +11,6 @@ import {
   Check,
 } from "lucide-react";
 
-const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID; // add to your .env
-
 const loadRazorpayScript = () =>
   new Promise((resolve) => {
     if (document.getElementById("razorpay-script")) return resolve(true);
@@ -32,6 +30,13 @@ const LoyaltyPage = () => {
   const [lastRewardDate, setLastReward] = useState(null);
   const [expiryDate, setExpiry] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [userInfo] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("userInfo") || "{}");
+    } catch {
+      return {};
+    }
+  });
 
   const maxCycles = 4;
 
@@ -71,50 +76,59 @@ const LoyaltyPage = () => {
       const loaded = await loadRazorpayScript();
       if (!loaded) {
         alert("Failed to load payment gateway. Please try again.");
+        setProcessing(false);
         return;
       }
 
-      // 2. Create order on your backend → returns { orderId, amount, currency }
-      const { data: order } = await API.post("/api/payments/create-plus-order");
+      // 2. Reuse the same route cart uses — just pass 299 as the amount
+      const { data: rzpData } = await API.post("/api/payment/create-order", {
+        amount: 299,
+      });
 
       // 3. Open Razorpay checkout
       await new Promise((resolve, reject) => {
         const rzp = new window.Razorpay({
-          key: RAZORPAY_KEY,
-          amount: order.amount, // in paise, e.g. 29900
-          currency: order.currency || "INR",
-          name: "Your App",
-          description: "Plus Membership",
-          order_id: order.orderId,
+          key: rzpData.key,
+          amount: rzpData.amount,
+          currency: "INR",
+          name: "NeoMart",
+          description: "Plus Membership — ₹299",
+          order_id: rzpData.id,
           theme: { color: "#f5c842" },
+          prefill: {
+            name: userInfo?.name || "",
+            email: userInfo?.email || "",
+          },
           handler: async (response) => {
             try {
-              // 4. Verify payment & activate Plus on backend
-              await API.post("/api/payments/verify-plus", {
+              // 4. Verify payment & activate Plus — same verify route, with isPlus flag
+              await API.post("/api/orders/verify", {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
+                isPlus: true, // backend checks this and sets isPlusMember: true on user
               });
 
-              // 5. Reflect in UI immediately
+              // 5. Update UI immediately — no page reload needed
               setIsPlus(true);
-              fetchUserData(); // sync expiry date etc.
+              fetchUserData();
               resolve();
             } catch (err) {
               reject(err);
             }
           },
           modal: {
-            ondismiss: () => reject(new Error("Payment dismissed")),
+            ondismiss: () => {
+              setProcessing(false);
+              resolve(); // dismissed cleanly, no error alert
+            },
           },
         });
         rzp.open();
       });
     } catch (err) {
-      if (err?.message !== "Payment dismissed") {
-        console.error(err);
-        alert("Payment failed. Please try again.");
-      }
+      console.error(err);
+      alert("Payment failed. Please try again.");
     } finally {
       setProcessing(false);
     }
