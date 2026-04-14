@@ -11,6 +11,19 @@ import {
   Check,
 } from "lucide-react";
 
+const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID; // add to your .env
+
+const loadRazorpayScript = () =>
+  new Promise((resolve) => {
+    if (document.getElementById("razorpay-script")) return resolve(true);
+    const script = document.createElement("script");
+    script.id = "razorpay-script";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+
 const LoyaltyPage = () => {
   const navigate = useNavigate();
   const [points, setPoints] = useState(0);
@@ -29,7 +42,6 @@ const LoyaltyPage = () => {
   const fetchUserData = async () => {
     try {
       const { data } = await API.get("/api/users/profile");
-
       setPoints(data.loyaltyPoints || 0);
       setIsPlus(data.isPlusMember || false);
       setStreak(data.streakCount || 0);
@@ -54,10 +66,55 @@ const LoyaltyPage = () => {
   const handleActivatePlus = async () => {
     try {
       setProcessing(true);
-      await API.post("/api/users/activate-plus");
-      fetchUserData();
+
+      // 1. Load Razorpay SDK
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        alert("Failed to load payment gateway. Please try again.");
+        return;
+      }
+
+      // 2. Create order on your backend → returns { orderId, amount, currency }
+      const { data: order } = await API.post("/api/payments/create-plus-order");
+
+      // 3. Open Razorpay checkout
+      await new Promise((resolve, reject) => {
+        const rzp = new window.Razorpay({
+          key: RAZORPAY_KEY,
+          amount: order.amount, // in paise, e.g. 29900
+          currency: order.currency || "INR",
+          name: "Your App",
+          description: "Plus Membership",
+          order_id: order.orderId,
+          theme: { color: "#f5c842" },
+          handler: async (response) => {
+            try {
+              // 4. Verify payment & activate Plus on backend
+              await API.post("/api/payments/verify-plus", {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              });
+
+              // 5. Reflect in UI immediately
+              setIsPlus(true);
+              fetchUserData(); // sync expiry date etc.
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          },
+          modal: {
+            ondismiss: () => reject(new Error("Payment dismissed")),
+          },
+        });
+        rzp.open();
+      });
     } catch (err) {
-      console.error(err);
+      if (err?.message !== "Payment dismissed") {
+        console.error(err);
+        alert("Payment failed. Please try again.");
+      }
     } finally {
       setProcessing(false);
     }
@@ -301,7 +358,7 @@ const LoyaltyPage = () => {
                       opacity: processing ? 0.6 : 1,
                     }}
                   >
-                    {processing ? "Activating…" : "✦ Activate Plus Now"}
+                    {processing ? "Opening Payment…" : "✦ Activate Plus — ₹299"}
                   </button>
                 ) : (
                   <div
@@ -334,7 +391,7 @@ const LoyaltyPage = () => {
                 "Spend ₹500+ in a single order",
                 "Repeat every 14 days",
                 "Complete 4 cycles (≈ 2 months)",
-                "Plus unlocks automatically 🎉",
+                "Pay ₹299 to activate Plus 🎉",
               ].map((text, i) => (
                 <div
                   key={i}
